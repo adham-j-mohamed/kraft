@@ -3,8 +3,7 @@
  * (hård regel 3): en rad som tillhör ett annat konto ska se ut som om den inte finns.
  */
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import { swedishNamesMatching, canonicalNameFromInput } from "@/lib/i18n/exercises";
-import { getLocale } from "@/lib/i18n/server";
+import { swedishNamesMatching } from "@/lib/i18n/exercises";
 import { intlTag, type Locale } from "@/lib/i18n/locales";
 import { getDb } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db/errors";
@@ -115,17 +114,11 @@ export async function createExercise(
   input: { name: string; muscleGroup: string; equipment?: string | null; tracking: Tracking },
 ): Promise<{ ok: true; exercise: ExerciseRef } | { ok: false; error: "name_taken" }> {
   try {
-    // Canonicalize user-provided name where possible so the DB keeps the seeded
-    // Swedish keys. This allows English sessions to create e.g. "bench" and still
-    // store "Bänkpress" as the canonical name.
-    await getLocale(); // ensure headers/cookies available in request context
-    const nameToStore = canonicalNameFromInput(input.name);
-
     const [row] = await getDb()
       .insert(exercises)
       .values({
         userId,
-        name: nameToStore,
+        name: input.name,
         muscleGroup: input.muscleGroup,
         equipment: input.equipment || null,
         tracking: input.tracking,

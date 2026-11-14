@@ -24,6 +24,8 @@ export const sv = {
 
   // -------------------------------------------------------------- toppfält
   "top.language": "Språk",
+  "theme.toLight": "Byt till ljust tema",
+  "theme.toDark": "Byt till mörkt tema",
   "top.langAuto": "Auto · {name}",
   "top.bellNone": "Inga väntande kontoförfrågningar",
   "top.bell_one": "{n} konto väntar på godkännande",
@@ -134,6 +136,10 @@ export const sv = {
   "dash.review": "Granska",
   "dash.food": "Mat",
   "dash.foodSoon": "Kalorier och makron kommer snart. Träningen finns redan.",
+  "dash.status": "Status",
+  "dash.db": "Databas: ansluten ({time})",
+  "dash.login": "Inloggning: {name} ({role})",
+  "dash.foodNext": "Mat: dagbok och streckkod byggs härnäst.",
   "dash.nextWorkout": "Nästa pass",
   "dash.ongoing": "Pågående pass",
   "dash.continue": "Fortsätt passet",
@@ -341,6 +347,8 @@ export const en: Dict = {
 
   // ------------------------------------------------------------ top bar
   "top.language": "Language",
+  "theme.toLight": "Switch to light theme",
+  "theme.toDark": "Switch to dark theme",
   "top.langAuto": "Auto · {name}",
   "top.bellNone": "No pending account requests",
   "top.bell_one": "{n} account waiting for approval",
@@ -451,6 +459,10 @@ export const en: Dict = {
   "dash.review": "Review",
   "dash.food": "Food",
   "dash.foodSoon": "Calorie and macro tracking is coming soon. Training is available now.",
+  "dash.status": "Status",
+  "dash.db": "Database: connected ({time})",
+  "dash.login": "Login: {name} ({role})",
+  "dash.foodNext": "Food: diary and barcode scanning are built next.",
   "dash.nextWorkout": "Next workout",
   "dash.ongoing": "Workout in progress",
   "dash.continue": "Continue workout",

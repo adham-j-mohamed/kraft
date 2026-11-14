@@ -86,22 +86,3 @@ export function equipmentLabel(name: string | null, locale: Locale): string | nu
   if (!name) return null;
   return locale === "en" ? (EQUIPMENT_EN[name] ?? name) : name;
 }
-
-/**
- * From a user-provided input, return the canonical stored name (Swedish key) if
- * the input matches a known English or Swedish name. Otherwise return the input
- * unchanged. This makes creating exercises language-aware: users who type
- * "bench" get the stored Swedish key "Bänkpress" so seeds remain consistent.
- */
-export function canonicalNameFromInput(input: string): string {
-  const q = input.trim();
-  if (!q) return input;
-  // swedishNamesMatching already checks both Swedish and English entries.
-  const matched = swedishNamesMatching(q);
-  if (matched.length) return matched[0];
-  // Fallback: exact English match to known translation map
-  for (const [sv, en] of Object.entries(EN)) {
-    if (en.toLowerCase() === q.toLowerCase()) return sv;
-  }
-  return input;
-}

@@ -5,29 +5,33 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import { LANG_COOKIE, LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n/locales";
+import type { Theme } from "@/lib/theme";
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /**
- * Fält längst upp på alla sidor: språkval, och för admin en ringklocka som visar hur
- * många konton som väntar på godkännande. Språket följer enheten tills man väljer
- * själv; "Auto" tar bort det egna valet igen.
+ * Fält längst upp på alla sidor: språkval, tema (mörkt/ljust) och för admin en ringklocka
+ * som visar hur många konton som väntar på godkännande. Språket följer enheten tills man
+ * väljer själv; "Auto" tar bort det egna valet igen.
  */
 export function TopBar({
   explicit,
   isAdmin,
   pending,
+  theme,
 }: {
   explicit: Locale | null;
   isAdmin: boolean;
   pending: number;
+  theme: Theme;
 }) {
   const { t, tn, locale } = useI18n();
   const router = useRouter();
   const [count, setCount] = useState(pending);
-  const [theme, setTheme] = useState<string>(typeof document !== 'undefined' ? document.documentElement.dataset.theme ?? 'system' : 'system');
+  const [current, setCurrent] = useState<Theme>(theme);
 
   useEffect(() => setCount(pending), [pending]);
+  useEffect(() => setCurrent(theme), [theme]);
 
   // Klockan uppdateras när fliken blir synlig och därefter var 45:e sekund.
   useEffect(() => {
@@ -59,21 +63,21 @@ export function TopBar({
     router.refresh();
   }
 
-  async function chooseTheme(value: string) {
-    const secure = location.protocol === "https:" ? "; Secure" : "";
-    if (value === "system") {
-      document.cookie = `kraft_theme=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
-    } else {
-      document.cookie = `kraft_theme=${value}; Path=/; Max-Age=${ONE_YEAR}; SameSite=Lax${secure}`;
-    }
-    document.documentElement.setAttribute('data-theme', value);
-    setTheme(value);
+  async function toggleTheme() {
+    const next: Theme = current === "dark" ? "light" : "dark";
+    // Direkt återkoppling; servern sätter kakan, sparar på kontot och renderar om med rätt tema.
+    document.documentElement.setAttribute("data-theme", next);
+    setCurrent(next);
     try {
-      // Try to persist server-side if logged in; endpoint accepts POST form
-      await fetch('/api/me/theme', { method: 'POST', body: new URLSearchParams({ theme: value }) });
+      await fetch("/api/me/theme", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ theme: next }),
+      });
     } catch {
-      /* ignore */
+      /* offline: valet gäller tills sidan laddas om */
     }
+    router.refresh();
   }
 
   const bellLabel = count > 0 ? tn("top.bell", count) : t("top.bellNone");
@@ -121,23 +125,24 @@ export function TopBar({
         </select>
       </label>
 
-      <label className="relative inline-flex h-10 items-center rounded-full border border-line bg-surface-2 pl-3 pr-2 text-sm">
-        <span className="sr-only">Tema</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mr-1.5 shrink-0">
-          <circle cx="12" cy="12" r="5" />
-          <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
-        </svg>
-        <select
-          className="cursor-pointer appearance-none bg-transparent pr-1 text-sm font-medium outline-none"
-          value={theme}
-          onChange={(e) => chooseTheme(e.target.value)}
-          aria-label="Tema"
-        >
-          <option value="system">Auto</option>
-          <option value="dark">Mörkt</option>
-          <option value="light">Ljust</option>
-        </select>
-      </label>
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={current === "dark" ? t("theme.toLight") : t("theme.toDark")}
+        title={current === "dark" ? t("theme.toLight") : t("theme.toDark")}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-2"
+      >
+        {current === "dark" ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }

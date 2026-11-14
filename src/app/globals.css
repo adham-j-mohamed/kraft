@@ -13,57 +13,24 @@
   --radius-card: 18px;
 }
 
-:root[data-theme="dark"] {
+/* Mörkt är standard (värdena i @theme ovan). Ljust läge skriver över dem; accenten är en
+   djupare grön så att länkar och pilar går att läsa mot vit bakgrund. */
+:root {
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #ffffff;
+  --color-bg: #f4f6f2;
   --color-surface: #ffffff;
-  --color-surface-2: #f7f7f7;
-  --color-line: #e5e7eb;
-  --color-ink: #0b0d0c;
-  --color-muted: #6b7280;
-  --color-accent: #16a34a;
+  --color-surface-2: #ebeee8;
+  --color-line: #d7ddd2;
+  --color-ink: #12160f;
+  --color-muted: #566052;
+  --color-accent: #357a0d;
   --color-accent-ink: #ffffff;
-  --color-danger: #ef4444;
+  --color-danger: #c62828;
 }
-
-:root[data-theme="system"] {
-  /* follow prefers-color-scheme */
-}
-
-@media (prefers-color-scheme: light) {
-  :root[data-theme="system"] {
-    color-scheme: light;
-    --color-bg: #ffffff;
-    --color-surface: #ffffff;
-    --color-surface-2: #f7f7f7;
-    --color-line: #e5e7eb;
-    --color-ink: #0b0d0c;
-    --color-muted: #6b7280;
-    --color-accent: #16a34a;
-    --color-accent-ink: #ffffff;
-    --color-danger: #ef4444;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] {
-    color-scheme: dark;
-    --color-bg: #0b0d0c;
-    --color-surface: #141815;
-    --color-surface-2: #1b211c;
-    --color-line: #2a322c;
-    --color-ink: #e9f0e9;
-    --color-muted: #93a196;
-    --color-accent: #b7f34a;
-    --color-accent-ink: #10150c;
-    --color-danger: #ff6b6b;
-  }
-}
-
 
 html,
 body {

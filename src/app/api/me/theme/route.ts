@@ -1,25 +1,46 @@
 import { eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
-import { appUrl } from "@/lib/auth/config";
+import { cookies } from "next/headers";
+import { jsonError } from "@/lib/api";
+import { cookieSecure } from "@/lib/auth/config";
 import { assertSameOrigin } from "@/lib/auth/origin";
-import { requireUser } from "@/lib/auth/user";
+import { getCurrentUser } from "@/lib/auth/user";
 import { getDb } from "@/lib/db";
-import { userSettings, users } from "@/lib/db/schema";
+import { userSettings } from "@/lib/db/schema";
+import { THEME_COOKIE, isTheme } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
-const VALID = new Set(["dark", "light", "system"] as const);
-
+/**
+ * Sätter temat. Kakan gäller den här enheten och funkar även utloggat; är man inloggad
+ * sparas valet dessutom på kontot så att en ny enhet får samma tema efter inloggning.
+ */
 export async function POST(request: Request) {
   const wrongOrigin = assertSameOrigin(request);
   if (wrongOrigin) return wrongOrigin;
 
-  const session = await requireUser();
-  const form = await request.formData();
-  const theme = String(form.get("theme") ?? "system");
-  if (!VALID.has(theme as any)) return NextResponse.redirect(new URL("/settings?error_theme=1", appUrl()));
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("bad_json", 400);
+  }
+  const theme = (body as { theme?: unknown } | null)?.theme;
+  if (!isTheme(theme)) return jsonError("invalid", 400);
 
-  const db = getDb();
-  await db.update(userSettings).set({ theme }).where(eq(userSettings.userId, session.id));
-  return NextResponse.redirect(new URL("/settings?ok_theme=1", appUrl()));
+  (await cookies()).set(THEME_COOKIE, theme, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+    secure: cookieSecure(),
+    httpOnly: true,
+  });
+
+  const user = await getCurrentUser();
+  if (user) {
+    await getDb()
+      .update(userSettings)
+      .set({ theme, updatedAt: new Date() })
+      .where(eq(userSettings.userId, user.id));
+  }
+  return Response.json({ ok: true, theme, saved: user !== null });
 }

@@ -5,8 +5,8 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { todayInZone } from "@/lib/dates";
 import { getI18n } from "@/lib/i18n/server";
 import { getActiveProgram, getActiveSession, nextWorkoutOf } from "@/lib/training/queries";
-import { getDb } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -17,16 +17,19 @@ export default async function DashboardPage() {
   const { t, tn, fmt, exName } = await getI18n();
   const today = todayInZone(user.settings.timezone);
 
-  const [program, active, pending] = await Promise.all([
+  // Statuskortet är driftinfo och visas bara för admin (rollen avgör, inte användarnamnet).
+  const isAdmin = user.role === "admin";
+  const [program, active, pending, dbTime] = await Promise.all([
     getActiveProgram(user.id),
     getActiveSession(user.id),
-    user.role === "admin" ? countPending() : Promise.resolve(0),
+    isAdmin ? countPending() : Promise.resolve(0),
+    isAdmin
+      ? getDb()
+          .execute<{ now: string }>(sql`select now()::text as now`)
+          .then((r) => r.rows[0]?.now.slice(0, 16) ?? "")
+      : Promise.resolve(null),
   ]);
   const next = program ? nextWorkoutOf(program) : null;
-
-  // Server time for the status card when shown
-  const status = await getDb().execute(sql`select now()::text as now`);
-  const showStatus = user.role === "admin" || user.username === "addejj" || user.username === "agent";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-10 pt-6">
@@ -98,19 +101,16 @@ export default async function DashboardPage() {
         <p className="muted text-sm">{t("dash.foodSoon")}</p>
       </section>
 
-      {showStatus ? (
+      {dbTime !== null ? (
         <section className="card text-sm">
-          <p className="muted text-xs uppercase tracking-wide">Status</p>
+          <p className="muted text-xs uppercase tracking-wide">{t("dash.status")}</p>
           <ul className="mt-2 space-y-1">
-            <li>Databas: ansluten ({String(status.rows[0]?.now ?? "").slice(0, 16)})</li>
-            <li>
-              Inloggning: {user.username} ({user.role === "admin" ? "admin" : "medlem"})
-            </li>
-            <li>Mat: dagbok och streckkod byggs efter träningen</li>
+            <li>{t("dash.db", { time: dbTime })}</li>
+            <li>{t("dash.login", { name: user.username, role: t("role.admin") })}</li>
+            <li>{t("dash.foodNext")}</li>
           </ul>
         </section>
       ) : null}
-
     </main>
   );
 }
