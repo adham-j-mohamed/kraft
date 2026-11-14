@@ -34,6 +34,7 @@ Safari and it runs full screen with the camera available.
   immediately. Admins can also create ready-made accounts directly.
 - Registration is rate-limited per IP address (5 per hour), capped at 50 pending
   requests, and has a hidden honeypot field against simple bots.
+- A help page at `/help` (open without logging in) explains the whole app: quick start, installing on the home screen, programs and rotation, logging a workout, how the numbers are calculated, an admin section (admins only) and an FAQ.
 - English and Swedish. The language follows the device (`Accept-Language`) until
   the user picks one in the language menu at the top of every page.
 - Passwords are hashed with scrypt from Node's standard library (no native

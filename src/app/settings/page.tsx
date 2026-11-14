@@ -72,6 +72,10 @@ export default async function SettingsPage({
         </button>
       </form>
 
+      <Link className="btn w-full" href="/help">
+        {t("top.help")}
+      </Link>
+
       <form action="/api/auth/logout" method="post">
         <button className="btn w-full" type="submit">
           {t("settings.logout")}

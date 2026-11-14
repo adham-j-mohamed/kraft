@@ -33,12 +33,12 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-10 pt-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-3">
         <div>
           <p className="muted text-xs">{today}</p>
           <h1 className="text-2xl font-semibold">{t("dash.hello", { name: user.name ?? user.username })}</h1>
         </div>
-        <div className="flex gap-2">
+        <nav className="flex flex-wrap gap-2">
           <Link className="btn px-4 py-2 text-sm" href="/train">
             {t("nav.training")}
           </Link>
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
               {t("nav.users")}
             </Link>
           ) : null}
-        </div>
+        </nav>
       </header>
 
       {pending > 0 ? (

@@ -6,13 +6,16 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import { LANG_COOKIE, LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n/locales";
 import type { Theme } from "@/lib/theme";
+import { Logo } from "./Logo";
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
+const CHIP = "inline-flex h-10 items-center justify-center rounded-full border border-line bg-surface-2";
 
 /**
- * Fält längst upp på alla sidor: språkval, tema (mörkt/ljust) och för admin en ringklocka
- * som visar hur många konton som väntar på godkännande. Språket följer enheten tills man
- * väljer själv; "Auto" tar bort det egna valet igen.
+ * Fält längst upp på alla sidor. Till vänster loggan (leder alltid till startsidan). Till höger:
+ * för admin en ringklocka med antalet väntande konton, språkval, temaknapp och hjälp. Språket
+ * följer enheten tills man väljer själv; "Auto" tar bort det egna valet igen. På smala skärmar
+ * bryts kontrollerna till en egen rad i stället för att tryckas ut ur bild.
  */
 export function TopBar({
   explicit,
@@ -81,68 +84,73 @@ export function TopBar({
   }
 
   const bellLabel = count > 0 ? tn("top.bell", count) : t("top.bellNone");
+  const themeLabel = current === "dark" ? t("theme.toLight") : t("theme.toDark");
 
   return (
-    <div className="mx-auto flex w-full max-w-md items-center justify-end gap-2 px-4 pt-3">
-      {isAdmin ? (
-        <Link
-          href="/admin/users#pending"
-          aria-label={bellLabel}
-          title={bellLabel}
-          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-2"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    <div className="mx-auto flex w-full max-w-md flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 pt-3">
+      <Link href="/" aria-label={t("top.home")} title={t("top.home")} className="rounded-full py-1">
+        <Logo />
+      </Link>
+
+      <div className="flex items-center gap-2">
+        {isAdmin ? (
+          <Link href="/admin/users#pending" aria-label={bellLabel} title={bellLabel} className={`${CHIP} relative w-10`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+            </svg>
+            {count > 0 ? (
+              <span className="bg-accent text-accent-ink absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold tabular-nums">
+                {count > 99 ? "99+" : count}
+              </span>
+            ) : null}
+          </Link>
+        ) : null}
+
+        {/* Synlig text är bara språkkoden; den riktiga väljaren ligger osynlig ovanpå. */}
+        <label className={`${CHIP} relative gap-1.5 px-3 text-sm font-semibold`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
           </svg>
-          {count > 0 ? (
-            <span className="bg-accent text-accent-ink absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold tabular-nums">
-              {count > 99 ? "99+" : count}
-            </span>
-          ) : null}
+          <span aria-hidden="true">{locale.toUpperCase()}</span>
+          <select
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            value={explicit ?? "auto"}
+            onChange={(e) => choose(e.target.value)}
+            aria-label={t("top.language")}
+          >
+            <option value="auto">{t("top.langAuto", { name: LOCALE_NAMES[locale] })}</option>
+            {LOCALES.map((l) => (
+              <option key={l} value={l}>
+                {LOCALE_NAMES[l]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button type="button" onClick={toggleTheme} aria-label={themeLabel} title={themeLabel} className={`${CHIP} w-10`}>
+          {current === "dark" ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          )}
+        </button>
+
+        <Link href="/help" aria-label={t("top.help")} title={t("top.help")} className={`${CHIP} w-10`}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+            <path d="M12 17h.01" />
+          </svg>
         </Link>
-      ) : null}
-
-      <label className="relative inline-flex h-10 items-center rounded-full border border-line bg-surface-2 pl-3 pr-2 text-sm">
-        <span className="sr-only">{t("top.language")}</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mr-1.5 shrink-0">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M2 12h20" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-        <select
-          className="cursor-pointer appearance-none bg-transparent pr-1 text-sm font-medium outline-none"
-          value={explicit ?? "auto"}
-          onChange={(e) => choose(e.target.value)}
-          aria-label={t("top.language")}
-        >
-          <option value="auto">{t("top.langAuto", { name: LOCALE_NAMES[locale] })}</option>
-          {LOCALES.map((l) => (
-            <option key={l} value={l}>
-              {LOCALE_NAMES[l]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-label={current === "dark" ? t("theme.toLight") : t("theme.toDark")}
-        title={current === "dark" ? t("theme.toLight") : t("theme.toDark")}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-2"
-      >
-        {current === "dark" ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-          </svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-          </svg>
-        )}
-      </button>
+      </div>
     </div>
   );
 }

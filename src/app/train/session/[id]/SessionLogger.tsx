@@ -460,7 +460,10 @@ function ExerciseCard({
     if (!confirm(t("sess.deleteSetConfirm", { n: s.setNumber }))) return;
     const res = await fetch(`/api/sessions/${sessionId}/sets/${s.id}`, { method: "DELETE" });
     if (!res.ok) return setError(t("sess.err.delete"));
-    onSets(ex.id, (sets) => sets.filter((x) => x.id !== s.id));
+    // Numreringen på servern hålls sammanhängande; spegla det här utan att ladda om.
+    onSets(ex.id, (sets) =>
+      sets.filter((x) => x.id !== s.id).map((x) => (x.setNumber > s.setNumber ? { ...x, setNumber: x.setNumber - 1 } : x)),
+    );
     if (editing?.id === s.id) setEditing(null);
   }
 

@@ -81,6 +81,11 @@ export default async function LoginPage({
           </Link>
         </p>
         <p className="muted">{t("login.installHint")}</p>
+        <p>
+          <Link href="/help" className="text-accent font-semibold underline underline-offset-2">
+            {t("top.help")}
+          </Link>
+        </p>
       </div>
     </main>
   );

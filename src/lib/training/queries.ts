@@ -2,7 +2,7 @@
  * Serverfrågor för träningsdelen. Varje funktion tar `userId` och filtrerar på det
  * (hård regel 3): en rad som tillhör ett annat konto ska se ut som om den inte finns.
  */
-import { and, asc, desc, eq, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { swedishNamesMatching } from "@/lib/i18n/exercises";
 import { intlTag, type Locale } from "@/lib/i18n/locales";
 import { getDb } from "@/lib/db";
@@ -652,7 +652,25 @@ export async function updateSet(
 
 export async function deleteSet(userId: string, sessionId: string, setId: string): Promise<boolean> {
   if (!(await ownsSet(userId, sessionId, setId))) return false;
-  await getDb().delete(sessionSets).where(eq(sessionSets.id, setId));
+  await getDb().transaction(async (tx) => {
+    const [gone] = await tx
+      .delete(sessionSets)
+      .where(eq(sessionSets.id, setId))
+      .returning({ exerciseId: sessionSets.sessionExerciseId, n: sessionSets.setNumber });
+    if (!gone) return;
+    // Håll numreringen sammanhängande (1, 2, 3 — inte 1, 3, 4): "förra passet" matchar på
+    // setnummer. Unika indexet tillåter inte ett enda `set_number - 1`, så det görs i två steg
+    // via negativa tal.
+    const same = eq(sessionSets.sessionExerciseId, gone.exerciseId);
+    await tx
+      .update(sessionSets)
+      .set({ setNumber: sql`-(${sessionSets.setNumber} - 1)` })
+      .where(and(same, gt(sessionSets.setNumber, gone.n)));
+    await tx
+      .update(sessionSets)
+      .set({ setNumber: sql`-${sessionSets.setNumber}` })
+      .where(and(same, lt(sessionSets.setNumber, 0)));
+  });
   return true;
 }
 

@@ -44,6 +44,7 @@ filen gäller allt arbete i repot.
 | `src/app` | sidor och API-routes (App Router) |
 | `src/lib/db/schema.ts` | datamodellen, enda källan till sanning |
 | `src/lib/auth` | lösenordshash (scrypt), sessioner, inloggning, behörighetsregler, väntande konton (`pending.ts`) |
+| `src/lib/help/content.ts` | texten på hjälpsidan (`/help`), svenska och engelska. **Ändrar du hur appen beter sig, ändra hjälptexten i samma commit** |
 | `src/lib/i18n` | språkval (kaka `kraft_lang`, annars enhetens `Accept-Language`), ordlistor, övningsnamn |
 | `src/lib/nutrition.ts` | BMR, TDEE, makrofördelning, 1RM |
 | `src/lib/training` | träningsdelen: frågor (`queries.ts`), validering (zod), typer och progressionslogik som även klienten använder |

@@ -24,6 +24,8 @@ export const sv = {
 
   // -------------------------------------------------------------- toppfält
   "top.language": "Språk",
+  "top.home": "Till startsidan",
+  "top.help": "Hjälp",
   "theme.toLight": "Byt till ljust tema",
   "theme.toDark": "Byt till mörkt tema",
   "top.langAuto": "Auto · {name}",
@@ -347,6 +349,8 @@ export const en: Dict = {
 
   // ------------------------------------------------------------ top bar
   "top.language": "Language",
+  "top.home": "Go to home page",
+  "top.help": "Help",
   "theme.toLight": "Switch to light theme",
   "theme.toDark": "Switch to dark theme",
   "top.langAuto": "Auto · {name}",
