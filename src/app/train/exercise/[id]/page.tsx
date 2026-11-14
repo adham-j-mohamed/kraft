@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/user";
 import { exerciseHistory } from "@/lib/training/queries";
-import { bestScore, fmtNum, fmtSet, TRACKING_LABEL } from "@/lib/training/types";
+import type { Key } from "@/lib/i18n/dictionaries";
+import { getI18n } from "@/lib/i18n/server";
+import { bestScore } from "@/lib/training/types";
 
 export const dynamic = "force-dynamic";
 
@@ -14,57 +16,58 @@ export default async function ExercisePage({ params }: { params: Promise<{ id: s
   if (!user) redirect(`/login?next=/train/exercise/${id}`);
   if (!UUID.test(id)) notFound();
 
-  const history = await exerciseHistory(user.id, id, user.settings.timezone);
+  const { t, locale, fmt, exName } = await getI18n();
+  const history = await exerciseHistory(user.id, id, { timeZone: user.settings.timezone, locale });
   if (!history) notFound();
   const { exercise, entries, pb } = history;
 
   // Äldst först i grafen.
   const points = [...entries].reverse().map((e) => bestScore(e.best, e.tracking));
-  const unit = exercise.tracking === "weight_reps" ? "kg (uppskattat 1RM)" : exercise.tracking === "reps_only" ? "reps" : exercise.tracking === "time" ? "sekunder" : "meter";
+  const unit = t(`ex.trendUnit.${exercise.tracking}` as Key);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-10 pt-6">
       <header className="flex items-center justify-between">
         <div className="min-w-0">
           <p className="muted text-xs uppercase tracking-wide">
-            {exercise.muscleGroup} · {TRACKING_LABEL[exercise.tracking]}
+            {t(`muscle.${exercise.muscleGroup}` as Key) === `muscle.${exercise.muscleGroup}` ? exercise.muscleGroup : t(`muscle.${exercise.muscleGroup}` as Key)} · {t(`tracking.${exercise.tracking}` as Key)}
           </p>
-          <h1 className="truncate text-2xl font-semibold">{exercise.name}</h1>
+          <h1 className="truncate text-2xl font-semibold">{exName(exercise.name)}</h1>
         </div>
         <Link className="btn px-4 py-2 text-sm" href="/train">
-          Tillbaka
+          {t("common.back")}
         </Link>
       </header>
 
       {entries.length === 0 ? (
         <section className="card text-sm">
-          <p>Inga avslutade pass med den här övningen än. Historiken dyker upp när du avslutat ett pass.</p>
+          <p>{t("ex.noHistory")}</p>
         </section>
       ) : (
         <>
           {pb ? (
             <section className="card flex flex-col gap-1">
-              <p className="muted text-xs uppercase tracking-wide">Bästa set</p>
-              <p className="text-2xl font-semibold tabular-nums">{fmtSet(pb.best, exercise.tracking)}</p>
+              <p className="muted text-xs uppercase tracking-wide">{t("ex.bestSet")}</p>
+              <p className="text-2xl font-semibold tabular-nums">{fmt.set(pb.best, exercise.tracking)}</p>
               <p className="muted text-xs">
                 {pb.dateLabel}
-                {pb.best.e1rm ? ` · ≈ ${fmtNum(pb.best.e1rm, 1)} kg 1RM (Epley)` : ""}
+                {pb.best.e1rm ? ` · ${t("ex.e1rm", { n: fmt.num(pb.best.e1rm, 1) })}` : ""}
               </p>
             </section>
           ) : null}
 
           {points.length >= 2 ? (
             <section className="card flex flex-col gap-2">
-              <p className="muted text-xs uppercase tracking-wide">Utveckling · {unit}</p>
-              <Sparkline points={points} />
+              <p className="muted text-xs uppercase tracking-wide">{t("ex.trend", { unit })}</p>
+              <Sparkline points={points} label={t("ex.chartLabel")} />
               <p className="muted text-xs tabular-nums">
-                {fmtNum(points[0], 1)} → {fmtNum(points[points.length - 1], 1)} över {points.length} pass
+                {t("ex.trendSummary", { from: fmt.num(points[0], 1), to: fmt.num(points[points.length - 1], 1), n: points.length })}
               </p>
             </section>
           ) : null}
 
           <section className="card flex flex-col gap-3">
-            <p className="muted text-xs uppercase tracking-wide">Pass för pass</p>
+            <p className="muted text-xs uppercase tracking-wide">{t("ex.byWorkout")}</p>
             <ul className="flex flex-col divide-y divide-line">
               {entries.map((e) => (
                 <li key={e.sessionId} className="flex flex-col gap-1 py-3">
@@ -73,7 +76,7 @@ export default async function ExercisePage({ params }: { params: Promise<{ id: s
                     <span className="muted text-xs">{e.workoutName}</span>
                   </Link>
                   <p className="text-sm tabular-nums">
-                    {e.sets.map((s) => fmtSet(s, e.tracking)).join("  ·  ")}
+                    {e.sets.map((s) => fmt.set(s, e.tracking)).join("  ·  ")}
                   </p>
                 </li>
               ))}
@@ -86,7 +89,7 @@ export default async function ExercisePage({ params }: { params: Promise<{ id: s
 }
 
 /** Enkel linje utan bibliotek. Y-axeln börjar inte på noll — det är trenden som visas. */
-function Sparkline({ points }: { points: number[] }) {
+function Sparkline({ points, label }: { points: number[]; label: string }) {
   const w = 320;
   const h = 80;
   const pad = 6;
@@ -97,7 +100,7 @@ function Sparkline({ points }: { points: number[] }) {
   const y = (v: number) => h - pad - ((v - min) / span) * (h - 2 * pad);
   const path = points.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-20 w-full" role="img" aria-label="Utveckling över tid">
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-20 w-full" role="img" aria-label={label}>
       <path d={path} fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((v, i) => (
         <circle key={i} cx={x(i)} cy={y(v)} r={i === points.length - 1 ? 4 : 2.5} fill="var(--color-accent)" />

@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   try {
     const [created] = await db
       .insert(users)
-      .values({ username, passwordHash, name: username, role })
+      .values({ username, passwordHash, name: username, role, status: "approved" })
       .returning();
     await db.insert(userSettings).values({ userId: created.id }).onConflictDoNothing();
   } catch {

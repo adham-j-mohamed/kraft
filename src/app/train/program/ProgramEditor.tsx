@@ -2,13 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  MUSCLE_GROUPS,
-  TRACKING_LABEL,
-  type ExerciseRef,
-  type ProgramDTO,
-  type Tracking,
-} from "@/lib/training/types";
+import { useI18n } from "@/lib/i18n/client";
+import type { Key } from "@/lib/i18n/dictionaries";
+import { MUSCLE_GROUPS, type ExerciseRef, type ProgramDTO, type Tracking } from "@/lib/training/types";
+
+const TRACKINGS: Tracking[] = ["weight_reps", "reps_only", "time", "distance"];
 
 interface EditExercise {
   key: string;
@@ -34,6 +32,13 @@ interface EditWorkout {
 const uid = () => crypto.randomUUID();
 const letter = (i: number) => String.fromCharCode(65 + (i % 26));
 
+/** "A → B → C → A …" för tre pass, "A → A …" för ett; långa rotationer kortas med "…". */
+function rotationSequence(n: number): string {
+  const shown = Array.from({ length: Math.min(n, 4) }, (_, i) => letter(i));
+  const middle = n > 4 ? [...shown.slice(0, 3), "…", letter(n - 1)] : shown;
+  return `${middle.join(" → ")} → A${n > 4 ? "" : " …"}`;
+}
+
 function defaultsFor(tracking: Tracking): Pick<EditExercise, "sets" | "repsLow" | "repsHigh" | "seconds" | "meters" | "rest"> {
   switch (tracking) {
     case "weight_reps":
@@ -47,11 +52,14 @@ function defaultsFor(tracking: Tracking): Pick<EditExercise, "sets" | "repsLow" 
   }
 }
 
-function fromProgram(program: ProgramDTO | null): { name: string; workouts: EditWorkout[] } {
+function fromProgram(
+  program: ProgramDTO | null,
+  names: { program: string; workout: (letter: string) => string },
+): { name: string; workouts: EditWorkout[] } {
   if (!program) {
     return {
-      name: "Mitt program",
-      workouts: ["A", "B", "C"].map((l) => ({ key: uid(), name: `Pass ${l}`, exercises: [] })),
+      name: names.program,
+      workouts: ["A", "B", "C"].map((l) => ({ key: uid(), name: names.workout(l), exercises: [] })),
     };
   }
   return {
@@ -113,7 +121,13 @@ function buildPayload(name: string, workouts: EditWorkout[]) {
 
 export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
   const router = useRouter();
-  const start = useRef(fromProgram(initial)).current;
+  const { t, exName } = useI18n();
+  const start = useRef(
+    fromProgram(initial, {
+      program: t("prog.defaultName"),
+      workout: (letter) => t("prog.workoutDefault", { letter }),
+    }),
+  ).current;
   const [name, setName] = useState(start.name);
   const [workouts, setWorkouts] = useState<EditWorkout[]>(start.workouts);
   const [pickerFor, setPickerFor] = useState<number | null>(null);
@@ -130,13 +144,13 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
       if (count > all.length) {
         const extra = Array.from({ length: count - all.length }, (_, k) => ({
           key: uid(),
-          name: `Pass ${letter(all.length + k)}`,
+          name: t("prog.workoutDefault", { letter: letter(all.length + k) }),
           exercises: [] as EditExercise[],
         }));
         return [...all, ...extra];
       }
       const removed = all.slice(count);
-      if (removed.some((w) => w.exercises.length > 0) && !confirm("Passen som tas bort har övningar. Ta bort ändå?")) {
+      if (removed.some((w) => w.exercises.length > 0) && !confirm(t("prog.removeConfirm"))) {
         return all;
       }
       return all.slice(0, count);
@@ -168,10 +182,10 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
 
   async function save() {
     setError(null);
-    if (!name.trim()) return setError("Programmet behöver ett namn.");
+    if (!name.trim()) return setError(t("prog.err.name"));
     for (const w of workouts) {
-      if (!w.name.trim()) return setError("Varje pass behöver ett namn.");
-      if (w.exercises.length === 0) return setError(`${w.name} har inga övningar än.`);
+      if (!w.name.trim()) return setError(t("prog.err.workoutName"));
+      if (w.exercises.length === 0) return setError(t("prog.err.noExercises", { name: w.name }));
     }
     setBusy(true);
     try {
@@ -182,12 +196,12 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        return setError(data.error === "invalid" ? "Något fält har ett ogiltigt värde." : "Kunde inte spara programmet.");
+        return setError(data.error === "invalid" ? t("prog.err.invalid") : t("prog.err.save"));
       }
       router.push("/train");
       router.refresh();
     } catch {
-      setError("Ingen kontakt med servern.");
+      setError(t("common.noContact"));
     } finally {
       setBusy(false);
     }
@@ -195,11 +209,11 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
 
   async function remove() {
     if (!initial) return;
-    if (!confirm("Ta bort programmet? Genomförda pass och historiken ligger kvar.")) return;
+    if (!confirm(t("prog.deleteConfirm"))) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/program/${initial.id}`, { method: "DELETE" });
-      if (!res.ok) return setError("Kunde inte ta bort programmet.");
+      if (!res.ok) return setError(t("prog.err.delete"));
       router.push("/train");
       router.refresh();
     } finally {
@@ -211,13 +225,13 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
     <>
       <section className="card flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="muted text-xs">Programnamn</span>
+          <span className="muted text-xs">{t("prog.name")}</span>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
         </label>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium">Antal pass i rotationen</p>
-            <p className="muted text-xs">Du roterar A → B → C → A …</p>
+            <p className="text-sm font-medium">{t("prog.workoutCount")}</p>
+            <p className="muted text-xs">{t("prog.rotationHint", { seq: rotationSequence(workouts.length) })}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -225,7 +239,7 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
               className="btn h-11 w-11 px-0"
               onClick={() => setCount(Math.max(1, workouts.length - 1))}
               disabled={workouts.length <= 1}
-              aria-label="Färre pass"
+              aria-label={t("prog.fewer")}
             >
               −
             </button>
@@ -235,7 +249,7 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
               className="btn h-11 w-11 px-0"
               onClick={() => setCount(Math.min(14, workouts.length + 1))}
               disabled={workouts.length >= 14}
-              aria-label="Fler pass"
+              aria-label={t("prog.more")}
             >
               +
             </button>
@@ -249,7 +263,7 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
             className="input font-semibold"
             value={w.name}
             maxLength={60}
-            aria-label={`Namn på pass ${wi + 1}`}
+            aria-label={t("prog.workoutNameLabel", { n: wi + 1 })}
             onChange={(e) => updateWorkout(wi, (x) => ({ ...x, name: e.target.value }))}
           />
 
@@ -257,14 +271,14 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
             <div key={e.key} className="flex flex-col gap-2 rounded-xl border border-line p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium leading-tight">{e.name}</p>
-                  <p className="muted text-xs">{TRACKING_LABEL[e.tracking]}</p>
+                  <p className="font-medium leading-tight">{exName(e.name)}</p>
+                  <p className="muted text-xs">{t(`tracking.${e.tracking}` as Key)}</p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button type="button" className="btn h-9 min-h-0 w-9 px-0" onClick={() => moveExercise(wi, ei, -1)} disabled={ei === 0} aria-label="Flytta upp">
+                  <button type="button" className="btn h-9 min-h-0 w-9 px-0" onClick={() => moveExercise(wi, ei, -1)} disabled={ei === 0} aria-label={t("prog.up")}>
                     ↑
                   </button>
-                  <button type="button" className="btn h-9 min-h-0 w-9 px-0" onClick={() => moveExercise(wi, ei, 1)} disabled={ei === w.exercises.length - 1} aria-label="Flytta ned">
+                  <button type="button" className="btn h-9 min-h-0 w-9 px-0" onClick={() => moveExercise(wi, ei, 1)} disabled={ei === w.exercises.length - 1} aria-label={t("prog.down")}>
                     ↓
                   </button>
                   <button
@@ -277,7 +291,7 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
                         return { ...x, exercises: list };
                       })
                     }
-                    aria-label="Ta bort övning"
+                    aria-label={t("prog.removeExercise")}
                   >
                     ×
                   </button>
@@ -285,18 +299,18 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <Field label="Set" value={e.sets} onChange={(v) => updateExercise(wi, ei, { sets: v })} />
+                <Field label={t("prog.sets")} value={e.sets} onChange={(v) => updateExercise(wi, ei, { sets: v })} />
                 {e.tracking === "weight_reps" || e.tracking === "reps_only" ? (
                   <>
-                    <Field label="Reps från" value={e.repsLow} onChange={(v) => updateExercise(wi, ei, { repsLow: v })} />
-                    <Field label="Reps till" value={e.repsHigh} onChange={(v) => updateExercise(wi, ei, { repsHigh: v })} />
+                    <Field label={t("prog.repsFrom")} value={e.repsLow} onChange={(v) => updateExercise(wi, ei, { repsLow: v })} />
+                    <Field label={t("prog.repsTo")} value={e.repsHigh} onChange={(v) => updateExercise(wi, ei, { repsHigh: v })} />
                   </>
                 ) : e.tracking === "time" ? (
-                  <Field label="Sekunder" value={e.seconds} onChange={(v) => updateExercise(wi, ei, { seconds: v })} />
+                  <Field label={t("prog.seconds")} value={e.seconds} onChange={(v) => updateExercise(wi, ei, { seconds: v })} />
                 ) : (
-                  <Field label="Meter" value={e.meters} onChange={(v) => updateExercise(wi, ei, { meters: v })} />
+                  <Field label={t("prog.meters")} value={e.meters} onChange={(v) => updateExercise(wi, ei, { meters: v })} />
                 )}
-                <Field label="Vila (s)" value={e.rest} onChange={(v) => updateExercise(wi, ei, { rest: v })} />
+                <Field label={t("prog.rest")} value={e.rest} onChange={(v) => updateExercise(wi, ei, { rest: v })} />
               </div>
 
               {ei > 0 ? (
@@ -306,14 +320,14 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
                     checked={e.linkPrev}
                     onChange={(ev) => updateExercise(wi, ei, { linkPrev: ev.target.checked })}
                   />
-                  Superset med övningen ovanför
+                  {t("prog.superset")}
                 </label>
               ) : null}
             </div>
           ))}
 
           <button type="button" className="btn w-full" onClick={() => setPickerFor(wi)}>
-            + Lägg till övning
+            {t("prog.addExercise")}
           </button>
         </section>
       ))}
@@ -324,11 +338,11 @@ export function ProgramEditor({ initial }: { initial: ProgramDTO | null }) {
         <div className="mx-auto flex max-w-md gap-3">
           {initial ? (
             <button type="button" className="btn" onClick={remove} disabled={busy}>
-              Ta bort
+              {t("prog.delete")}
             </button>
           ) : null}
           <button type="button" className="btn btn-primary flex-1" onClick={save} disabled={busy}>
-            {busy ? "Sparar…" : "Spara program"}
+            {busy ? t("common.saving") : t("prog.save")}
           </button>
         </div>
       </div>
@@ -355,12 +369,18 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 }
 
 function ExercisePicker({ onPick, onClose }: { onPick: (e: ExerciseRef) => void; onClose: () => void }) {
+  const { t, exName, equipment } = useI18n();
   const [q, setQ] = useState("");
   const [list, setList] = useState<ExerciseRef[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [group, setGroup] = useState<string>("annat");
   const [tracking, setTracking] = useState<Tracking>("weight_reps");
   const [createError, setCreateError] = useState<string | null>(null);
+  const mgLabel = (g: string) => {
+    const key = `muscle.${g}` as Key;
+    const label = t(key);
+    return label === key ? g : label;
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -387,7 +407,7 @@ function ExercisePicker({ onPick, onClose }: { onPick: (e: ExerciseRef) => void;
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) return onPick(data.exercise);
-    setCreateError(data.error === "name_taken" ? "Du har redan en övning med det namnet." : "Kunde inte skapa övningen.");
+    setCreateError(data.error === "name_taken" ? t("pick.err.taken") : t("pick.err.create"));
   }
 
   return (
@@ -396,27 +416,27 @@ function ExercisePicker({ onPick, onClose }: { onPick: (e: ExerciseRef) => void;
         <div className="flex items-center gap-2">
           <input
             className="input"
-            placeholder="Sök övning, t.ex. bänk"
+            placeholder={t("pick.search")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             autoFocus
           />
           <button type="button" className="btn px-4" onClick={onClose}>
-            Stäng
+            {t("common.close")}
           </button>
         </div>
 
-        {list === null ? <p className="muted text-sm">Hämtar…</p> : null}
+        {list === null ? <p className="muted text-sm">{t("common.loading")}</p> : null}
         <ul className="flex flex-col divide-y divide-line">
           {list?.map((e) => (
             <li key={e.id}>
               <button type="button" className="flex w-full items-center justify-between gap-3 py-3 text-left" onClick={() => onPick(e)}>
                 <span>
-                  <span className="block font-medium">{e.name}</span>
+                  <span className="block font-medium">{exName(e.name)}</span>
                   <span className="muted text-xs">
-                    {e.muscleGroup}
-                    {e.equipment ? ` · ${e.equipment}` : ""}
-                    {e.own ? " · egen" : ""}
+                    {mgLabel(e.muscleGroup)}
+                    {e.equipment ? ` · ${equipment(e.equipment)}` : ""}
+                    {e.own ? ` · ${t("pick.own")}` : ""}
                   </span>
                 </span>
                 <span className="text-accent text-xl">+</span>
@@ -424,38 +444,40 @@ function ExercisePicker({ onPick, onClose }: { onPick: (e: ExerciseRef) => void;
             </li>
           ))}
         </ul>
-        {list && list.length === 0 ? <p className="muted text-sm">Ingen träff.</p> : null}
+        {list && list.length === 0 ? <p className="muted text-sm">{t("pick.noMatch")}</p> : null}
 
         <div className="card flex flex-col gap-3">
           <button type="button" className="text-left text-sm font-medium" onClick={() => setCreating((v) => !v)}>
-            {creating ? "▾" : "▸"} Skapa egen övning
+            {creating ? "▾" : "▸"} {t("pick.create")}
           </button>
           {creating ? (
             <>
               <p className="muted text-xs">
-                Namnet tas från sökfältet: <strong className="text-ink">{q.trim() || "—"}</strong>
+                {t("pick.nameFrom")} <strong className="text-ink">{q.trim() || "—"}</strong>
               </p>
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="muted text-xs">Muskelgrupp</span>
+                <span className="muted text-xs">{t("pick.group")}</span>
                 <select className="input" value={group} onChange={(e) => setGroup(e.target.value)}>
                   {MUSCLE_GROUPS.map((g) => (
-                    <option key={g}>{g}</option>
+                    <option key={g} value={g}>
+                      {mgLabel(g)}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="muted text-xs">Hur loggas den?</span>
+                <span className="muted text-xs">{t("pick.tracking")}</span>
                 <select className="input" value={tracking} onChange={(e) => setTracking(e.target.value as Tracking)}>
-                  {(Object.keys(TRACKING_LABEL) as Tracking[]).map((t) => (
-                    <option key={t} value={t}>
-                      {TRACKING_LABEL[t]}
+                  {TRACKINGS.map((tr) => (
+                    <option key={tr} value={tr}>
+                      {t(`tracking.${tr}` as Key)}
                     </option>
                   ))}
                 </select>
               </label>
               {createError ? <p className="text-danger text-xs">{createError}</p> : null}
               <button type="button" className="btn btn-primary w-full" onClick={create} disabled={!q.trim()}>
-                Skapa och lägg till
+                {t("pick.createBtn")}
               </button>
             </>
           ) : null}

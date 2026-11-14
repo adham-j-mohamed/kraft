@@ -27,9 +27,15 @@ Safari and it runs full screen with the camera available.
   weekly view.
 
 **Accounts**
-- Username and password. No third-party sign-in. The first account created
-  becomes the admin; after that the admin creates accounts for family and
-  friends under Admin → Users. There is no open registration.
+- Username and password. No third-party sign-in. Anyone can request an account
+  at `/register`, but it can't log in until an admin approves it: admins see a bell
+  with the number of pending requests on every page and approve or reject under
+  Admin → Users. The first account created becomes the admin and is approved
+  immediately. Admins can also create ready-made accounts directly.
+- Registration is rate-limited per IP address (5 per hour), capped at 50 pending
+  requests, and has a hidden honeypot field against simple bots.
+- English and Swedish. The language follows the device (`Accept-Language`) until
+  the user picks one in the language menu at the top of every page.
 - Passwords are hashed with scrypt from Node's standard library (no native
   dependency), and changing a password invalidates older sessions.
 - All data lives in Postgres on your own server, per account, and never only in
@@ -57,8 +63,8 @@ npm run dev
 ```
 
 The app listens on <http://localhost:3310>. The first visit goes to `/register`;
-the account you create there becomes the admin. New accounts are then created
-under Admin → Users.
+the account you create there becomes the admin and is approved immediately. Later
+registrations wait for an admin to approve them under Admin → Users.
 
 ## Deploy
 
@@ -78,10 +84,12 @@ itself only needs a hostname rule pointing at `http://<host>:3310`.
 
 ## Accounts
 
-The first account is created at `/register` and becomes the admin. After that the
-registration page redirects to `/login`, and the admin creates accounts under
-Admin → Users with a username and an initial password. Members can change their
-own password under Settings.
+The first account is created at `/register` and becomes the admin. After that,
+`/register` stays open: a new request is stored with status `pending` and cannot
+log in until an admin approves it under Admin → Users (a bell icon with a counter
+shows pending requests). Rejecting a request deletes it, which frees the username.
+Admins can also create accounts directly there with an initial password. Members
+can change their own password under Settings.
 
 Usernames are 3–32 characters, lowercase letters, digits, `.`, `-` or `_`. Passwords
 are at least 8 characters. Five failed logins per username and IP address block

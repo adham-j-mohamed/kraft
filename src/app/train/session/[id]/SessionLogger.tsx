@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useI18n } from "@/lib/i18n/client";
+import type { Key, TFn } from "@/lib/i18n/dictionaries";
+import type { Formatters } from "@/lib/training/format";
 import {
   bestOf,
   bestScore,
-  fmtDuration,
-  fmtNum,
-  fmtSet,
-  fmtTarget,
   progressionHint,
   setScore,
   workingSets,
@@ -29,6 +28,7 @@ interface Rest {
 
 export function SessionLogger({ initial }: { initial: SessionDTO }) {
   const router = useRouter();
+  const { t, tn, fmt, exName } = useI18n();
   const readOnly = initial.status !== "active";
   const [exercises, setExercises] = useState<SessionExerciseDTO[]>(initial.exercises);
   const [rest, setRest] = useState<Rest | null>(null);
@@ -67,8 +67,8 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
   // Tick för vilotimern.
   useEffect(() => {
     if (!rest) return;
-    const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
   }, [rest]);
 
   const remaining = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
@@ -113,11 +113,11 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
   async function finish() {
     const total = exercises.reduce((n, e) => n + e.sets.length, 0);
     if (total === 0) {
-      setFinishError("Logga minst ett set, eller avbryt passet.");
+      setFinishError(t("sess.err.noSets"));
       return;
     }
     const open = exercises.filter((e) => workingSets(e.sets).length < e.targetSets).length;
-    if (open > 0 && !confirm(`${open} övning${open > 1 ? "ar" : ""} har färre set än målet. Avsluta ändå?`)) return;
+    if (open > 0 && !confirm(tn("sess.openConfirm", open))) return;
     setFinishing(true);
     setFinishError(null);
     try {
@@ -128,19 +128,19 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setFinishError(data.error === "no_sets" ? "Logga minst ett set, eller avbryt passet." : "Kunde inte avsluta passet.");
+        setFinishError(data.error === "no_sets" ? t("sess.err.noSets") : t("sess.err.finish"));
         return;
       }
       router.refresh();
     } catch {
-      setFinishError("Ingen kontakt med servern.");
+      setFinishError(t("common.noContact"));
     } finally {
       setFinishing(false);
     }
   }
 
   async function abandon() {
-    if (!confirm("Avbryta passet? Det sparas inte i historiken och rotationen ändras inte.")) return;
+    if (!confirm(t("train.abandonConfirm"))) return;
     setFinishing(true);
     try {
       await fetch(`/api/sessions/${initial.id}`, {
@@ -156,6 +156,7 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
   }
 
   const totals = summarize(exercises);
+  const allDone = exercises.every((e) => workingSets(e.sets).length >= e.targetSets);
   const minutes =
     initial.finishedAt != null
       ? Math.max(1, Math.round((Date.parse(initial.finishedAt) - Date.parse(initial.startedAt)) / 60000))
@@ -166,25 +167,27 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
       <header className="flex items-center justify-between">
         <div>
           <p className="muted text-xs uppercase tracking-wide">
-            {initial.status === "active" ? "Pågående pass" : initial.status === "done" ? "Klart pass" : "Avbrutet pass"}
+            {initial.status === "active"
+              ? t("sess.ongoing")
+              : initial.status === "done"
+                ? t("sess.done")
+                : t("sess.abandoned")}
           </p>
           <h1 className="text-2xl font-semibold">{initial.workoutName}</h1>
         </div>
         <Link className="btn px-4 py-2 text-sm" href="/train">
-          {readOnly ? "Tillbaka" : "Översikt"}
+          {readOnly ? t("common.back") : t("common.overview")}
         </Link>
       </header>
 
       {initial.status === "done" ? (
         <section className="card grid grid-cols-3 gap-2 text-center">
-          <Stat label="Tid" value={minutes ? `${minutes} min` : "—"} />
-          <Stat label="Set" value={String(totals.sets)} />
-          <Stat label="Volym" value={totals.volume > 0 ? `${fmtNum(totals.volume, 0)} kg` : "—"} />
+          <Stat label={t("sess.time")} value={minutes ? t("sess.minutes", { n: minutes }) : "—"} />
+          <Stat label={t("sess.sets")} value={String(totals.sets)} />
+          <Stat label={t("sess.volume")} value={totals.volume > 0 ? `${fmt.num(totals.volume, 0)} kg` : "—"} />
         </section>
       ) : null}
-      {initial.status === "abandoned" ? (
-        <p className="muted text-sm">Passet avbröts och räknas inte i historiken eller rotationen.</p>
-      ) : null}
+      {initial.status === "abandoned" ? <p className="muted text-sm">{t("sess.abandonedNote")}</p> : null}
 
       {exercises.map((ex) => {
         const group = ex.supersetGroup;
@@ -197,8 +200,7 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
             ex={ex}
             sessionId={initial.id}
             readOnly={readOnly}
-            showSupersetTag={group != null}
-            supersetNext={nextInSuperset?.name ?? null}
+            supersetNext={nextInSuperset ? exName(nextInSuperset.name) : null}
             startsGroup={group != null && idx === 0}
             onSets={replaceSets}
             onRest={startRest}
@@ -209,11 +211,11 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
       {!readOnly ? (
         <section className="flex flex-col gap-3">
           {finishError ? <p className="text-danger text-sm">{finishError}</p> : null}
-          <button type="button" className="btn btn-primary w-full" onClick={finish} disabled={finishing}>
-            {finishing ? "Avslutar…" : "Avsluta pass"}
+          <button type="button" className={`btn ${allDone ? "btn-primary" : ""} w-full`} onClick={finish} disabled={finishing}>
+            {finishing ? t("sess.finishing") : t("sess.finish")}
           </button>
           <button type="button" className="btn w-full" onClick={abandon} disabled={finishing}>
-            Avbryt passet
+            {t("train.abandon")}
           </button>
         </section>
       ) : null}
@@ -222,9 +224,11 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur">
           <div className="mx-auto flex max-w-md items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="muted truncate text-xs">{remaining === 0 ? "Vilan är slut" : `Vila · ${rest.label}`}</p>
+              <p className="muted truncate text-xs">
+                {remaining === 0 ? t("sess.restOver") : t("sess.rest", { name: rest.label })}
+              </p>
               <p className={`text-3xl font-semibold tabular-nums ${remaining === 0 ? "text-accent" : ""}`}>
-                {remaining === 0 ? "Kör!" : fmtDuration(remaining)}
+                {remaining === 0 ? t("sess.go") : fmt.duration(remaining)}
               </p>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-line">
                 <div
@@ -241,10 +245,10 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
                 setRest((r) => (r ? { ...r, endsAt: Math.max(r.endsAt, Date.now()) + 15000, total: r.total + 15 } : r));
               }}
             >
-              +15 s
+              {t("sess.plus15")}
             </button>
             <button type="button" className="btn px-4" onClick={() => setRest(null)}>
-              {remaining === 0 ? "Stäng" : "Hoppa över"}
+              {remaining === 0 ? t("common.close") : t("sess.skip")}
             </button>
           </div>
         </div>
@@ -287,73 +291,76 @@ interface Inputs {
 
 const EMPTY: Inputs = { weight: "", reps: "", seconds: "", meters: "", rpe: "", setType: "normal" };
 
+/** Tar både komma och punkt som decimaltecken, oavsett språk. */
 const decimal = (s: string): number | null => {
-  const t = s.trim().replace(",", ".");
-  if (t === "") return null;
-  const n = Number(t);
+  const text = s.trim().replace(",", ".");
+  if (text === "") return null;
+  const n = Number(text);
   return Number.isFinite(n) && n >= 0 ? n : null;
 };
 
 /** "90" eller "1:30" → sekunder. */
 function duration(s: string): number | null {
-  const t = s.trim();
-  if (t === "") return null;
-  const m = /^(\d+):([0-5]?\d)$/.exec(t);
+  const text = s.trim();
+  if (text === "") return null;
+  const m = /^(\d+):([0-5]?\d)$/.exec(text);
   if (m) return Number(m[1]) * 60 + Number(m[2]);
-  const n = Number.parseInt(t, 10);
-  return Number.isFinite(n) && n >= 0 && /^\d+$/.test(t) ? n : null;
+  const n = Number.parseInt(text, 10);
+  return Number.isFinite(n) && n >= 0 && /^\d+$/.test(text) ? n : null;
 }
 
-function inputsFromSet(s: SetDTO): Inputs {
+function inputsFromSet(s: SetDTO, fmt: Formatters): Inputs {
   return {
-    weight: s.weightKg != null ? fmtNum(s.weightKg) : "",
+    weight: s.weightKg != null ? fmt.num(s.weightKg) : "",
     reps: s.reps?.toString() ?? "",
-    seconds: s.durationSec != null ? fmtDuration(s.durationSec).replace(" s", "") : "",
+    seconds: s.durationSec != null ? fmt.duration(s.durationSec).replace(" s", "") : "",
     meters: s.distanceM?.toString() ?? "",
-    rpe: s.rpe != null ? fmtNum(s.rpe, 1) : "",
+    rpe: s.rpe != null ? fmt.num(s.rpe, 1) : "",
     setType: s.setType,
   };
 }
 
-function parseInputs(i: Inputs, tracking: SessionExerciseDTO["tracking"]):
+type Parsed =
   | { ok: true; fields: Pick<SetDTO, "weightKg" | "reps" | "durationSec" | "distanceM" | "rpe" | "setType"> }
-  | { ok: false; message: string } {
+  | { ok: false; message: Key };
+
+function parseInputs(i: Inputs, tracking: SessionExerciseDTO["tracking"]): Parsed {
   const rpe = decimal(i.rpe);
   const base = { rpe: rpe != null && rpe >= 1 && rpe <= 10 ? rpe : null, setType: i.setType };
   const weight = decimal(i.weight);
   const reps = i.reps.trim() === "" ? null : Number.parseInt(i.reps, 10);
   switch (tracking) {
     case "weight_reps":
-      if (weight == null) return { ok: false, message: "Ange vikt (0 om ingen)." };
-      if (reps == null || !(reps >= 0)) return { ok: false, message: "Ange antal reps." };
+      if (weight == null) return { ok: false, message: "sess.err.weight" };
+      if (reps == null || !(reps >= 0)) return { ok: false, message: "sess.err.reps" };
       return { ok: true, fields: { ...base, weightKg: weight, reps, durationSec: null, distanceM: null } };
     case "reps_only":
-      if (reps == null || !(reps >= 0)) return { ok: false, message: "Ange antal reps." };
+      if (reps == null || !(reps >= 0)) return { ok: false, message: "sess.err.reps" };
       return { ok: true, fields: { ...base, weightKg: weight, reps, durationSec: null, distanceM: null } };
     case "time": {
       const sec = duration(i.seconds);
-      if (sec == null) return { ok: false, message: "Ange tid i sekunder eller m:ss." };
+      if (sec == null) return { ok: false, message: "sess.err.time" };
       return { ok: true, fields: { ...base, weightKg: null, reps: null, durationSec: sec, distanceM: null } };
     }
     case "distance": {
       const m = i.meters.trim() === "" ? null : Number.parseInt(i.meters, 10);
-      if (m == null || !(m >= 0)) return { ok: false, message: "Ange distans i meter." };
+      if (m == null || !(m >= 0)) return { ok: false, message: "sess.err.meters" };
       const sec = duration(i.seconds);
       return { ok: true, fields: { ...base, weightKg: null, reps: null, durationSec: sec, distanceM: m } };
     }
   }
 }
 
-function errorText(code: unknown): string {
+function errorText(t: TFn, code: unknown): string {
   switch (code) {
     case "session_closed":
-      return "Passet är avbrutet.";
+      return t("sess.err.closed");
     case "set_number_taken":
-      return "Setet finns redan — ladda om sidan.";
+      return t("sess.err.taken");
     case "invalid":
-      return "Något värde är ogiltigt.";
+      return t("sess.err.invalid");
     default:
-      return "Kunde inte spara setet.";
+      return t("sess.err.save");
   }
 }
 
@@ -363,7 +370,6 @@ function ExerciseCard({
   ex,
   sessionId,
   readOnly,
-  showSupersetTag,
   supersetNext,
   startsGroup,
   onSets,
@@ -372,35 +378,46 @@ function ExerciseCard({
   ex: SessionExerciseDTO;
   sessionId: string;
   readOnly: boolean;
-  showSupersetTag: boolean;
   supersetNext: string | null;
   startsGroup: boolean;
   onSets: (exerciseId: string, fn: (sets: SetDTO[]) => SetDTO[]) => void;
   onRest: (seconds: number, label: string) => void;
 }) {
+  const { t, fmt, exName } = useI18n();
   const prevWork = ex.previous ? workingSets(ex.previous.sets) : [];
   const [inputs, setInputs] = useState<Inputs>(() => {
     // Första setet föreslås med förra passets första arbetsset.
     const seed = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : (prevWork[0] ?? null);
-    return seed ? { ...inputsFromSet(seed), rpe: "", setType: "normal" } : EMPTY;
+    return seed ? { ...inputsFromSet(seed, fmt), rpe: "", setType: "normal" } : EMPTY;
   });
   const [editing, setEditing] = useState<SetDTO | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingId = useRef<string | null>(null);
 
+  const name = exName(ex.name);
   const done = workingSets(ex.sets).length;
   const nextNumber = ex.sets.reduce((m, s) => Math.max(m, s.setNumber), 0) + 1;
   const hint = !readOnly ? progressionHint(ex.previous, ex) : null;
   const best = bestOf(ex.sets, ex.tracking);
   const delta = ex.previous?.best ? bestScore(best, ex.tracking) - bestScore(ex.previous.best, ex.tracking) : null;
 
+  const hintText = hint
+    ? hint.kind === "first"
+      ? t("hint.first")
+      : hint.kind === "up"
+        ? t("hint.up", { top: hint.top, kg: fmt.num(hint.kg) })
+        : hint.kind === "hold"
+          ? t("hint.hold", { low: hint.low, kg: fmt.num(hint.kg) })
+          : t("hint.reps")
+    : null;
+
   const set = (patch: Partial<Inputs>) => setInputs((i) => ({ ...i, ...patch }));
 
   async function submit() {
     setError(null);
     const parsed = parseInputs(inputs, ex.tracking);
-    if (!parsed.ok) return setError(parsed.message);
+    if (!parsed.ok) return setError(t(parsed.message));
     setBusy(true);
     try {
       if (editing) {
@@ -410,10 +427,10 @@ function ExerciseCard({
           body: JSON.stringify(parsed.fields),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) return setError(errorText(data.error));
+        if (!res.ok) return setError(errorText(t, data.error));
         onSets(ex.id, (sets) => sets.map((s) => (s.id === editing.id ? data.set : s)));
         setEditing(null);
-        setInputs({ ...inputsFromSet(ex.sets[ex.sets.length - 1] ?? data.set), rpe: "", setType: "normal" });
+        setInputs({ ...inputsFromSet(ex.sets[ex.sets.length - 1] ?? data.set, fmt), rpe: "", setType: "normal" });
         return;
       }
 
@@ -425,39 +442,41 @@ function ExerciseCard({
         body: JSON.stringify({ sessionExerciseId: ex.id, clientId, ...parsed.fields }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return setError(errorText(data.error));
+      if (!res.ok) return setError(errorText(t, data.error));
       pendingId.current = null;
       onSets(ex.id, (sets) => (sets.some((s) => s.id === data.set.id) ? sets : [...sets, data.set]));
       setInputs((i) => ({ ...i, rpe: "", setType: "normal" }));
       // Superset: vila först efter sista övningen i gruppen.
       if (supersetNext) onRest(0, "");
-      else if (parsed.fields.setType !== "warmup") onRest(ex.restSeconds, ex.name);
+      else if (parsed.fields.setType !== "warmup") onRest(ex.restSeconds, name);
     } catch {
-      setError("Ingen kontakt med servern — försök igen.");
+      setError(t("common.noContactRetry"));
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(s: SetDTO) {
-    if (!confirm(`Ta bort set ${s.setNumber}?`)) return;
+    if (!confirm(t("sess.deleteSetConfirm", { n: s.setNumber }))) return;
     const res = await fetch(`/api/sessions/${sessionId}/sets/${s.id}`, { method: "DELETE" });
-    if (!res.ok) return setError("Kunde inte ta bort setet.");
+    if (!res.ok) return setError(t("sess.err.delete"));
     onSets(ex.id, (sets) => sets.filter((x) => x.id !== s.id));
     if (editing?.id === s.id) setEditing(null);
   }
 
   return (
     <section className="card flex flex-col gap-3">
-      {startsGroup ? <p className="text-accent -mb-1 text-xs font-semibold uppercase tracking-wide">Superset</p> : null}
+      {startsGroup ? (
+        <p className="text-accent -mb-1 text-xs font-semibold uppercase tracking-wide">{t("sess.superset")}</p>
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Link href={`/train/exercise/${ex.exerciseId}`} className="block text-lg font-semibold leading-tight">
-            {ex.name}
+            {name}
           </Link>
           <p className="muted text-xs">
-            Mål {fmtTarget(ex)}
-            {showSupersetTag && supersetNext ? ` · sedan ${supersetNext}` : ""}
+            {t("sess.target", { target: fmt.target(ex) })}
+            {supersetNext ? ` · ${t("sess.then", { name: supersetNext })}` : ""}
           </p>
         </div>
         <p className="muted shrink-0 text-sm tabular-nums">
@@ -467,24 +486,27 @@ function ExerciseCard({
 
       {ex.previous ? (
         <div className="rounded-xl bg-surface-2 px-3 py-2 text-sm">
-          <p className="muted text-xs">Förra passet · {ex.previous.dateLabel}</p>
-          <p className="tabular-nums">{ex.previous.sets.map((s) => fmtSet(s, ex.tracking)).join("  ·  ")}</p>
+          <p className="muted text-xs">{t("sess.prev", { date: ex.previous.dateLabel })}</p>
+          <p className="tabular-nums">{ex.previous.sets.map((s) => fmt.set(s, ex.tracking)).join("  ·  ")}</p>
           {ex.previous.best && ex.tracking === "weight_reps" && ex.previous.best.e1rm ? (
-            <p className="muted text-xs">Bäst: {fmtSet(ex.previous.best, ex.tracking)} (≈ {fmtNum(ex.previous.best.e1rm, 1)} kg 1RM)</p>
+            <p className="muted text-xs">
+              {t("sess.best", { set: fmt.set(ex.previous.best, ex.tracking), e1rm: fmt.num(ex.previous.best.e1rm, 1) })}
+            </p>
           ) : null}
-          {hint ? (
-            <p className={`mt-1 text-xs ${hint.kind === "up" ? "text-accent font-semibold" : "muted"}`}>{hint.text}</p>
+          {hintText ? (
+            <p className={`mt-1 text-xs ${hint?.kind === "up" ? "text-accent font-semibold" : "muted"}`}>{hintText}</p>
           ) : null}
         </div>
-      ) : !readOnly && hint ? (
-        <p className="muted text-xs">{hint.text}</p>
+      ) : !readOnly && hintText ? (
+        <p className="muted text-xs">{hintText}</p>
       ) : null}
 
       {ex.sets.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
           {ex.sets.map((s) => {
             const prev = ex.previous?.sets.find((p) => p.setNumber === s.setNumber);
-            const cmp = prev && s.setType !== "warmup" ? Math.sign(setScore(s, ex.tracking) - setScore(prev, ex.tracking)) : null;
+            const cmp =
+              prev && s.setType !== "warmup" ? Math.sign(setScore(s, ex.tracking) - setScore(prev, ex.tracking)) : null;
             return (
               <li key={s.id}>
                 <button
@@ -492,7 +514,7 @@ function ExerciseCard({
                   disabled={readOnly}
                   onClick={() => {
                     setEditing(s);
-                    setInputs(inputsFromSet(s));
+                    setInputs(inputsFromSet(s, fmt));
                     setError(null);
                   }}
                   className={`flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm ${
@@ -501,10 +523,12 @@ function ExerciseCard({
                 >
                   <span className="tabular-nums">
                     <span className="muted mr-2">{s.setNumber}</span>
-                    {fmtSet(s, ex.tracking)}
-                    {s.setType === "warmup" ? <span className="muted ml-2 text-xs">uppvärmning</span> : null}
-                    {s.setType === "dropset" ? <span className="muted ml-2 text-xs">dropset</span> : null}
-                    {s.rpe != null ? <span className="muted ml-2 text-xs">RPE {fmtNum(s.rpe, 1)}</span> : null}
+                    {fmt.set(s, ex.tracking)}
+                    {s.setType === "warmup" ? <span className="muted ml-2 text-xs">{t("sess.warmup")}</span> : null}
+                    {s.setType === "dropset" ? <span className="muted ml-2 text-xs">{t("sess.dropset")}</span> : null}
+                    {s.rpe != null ? (
+                      <span className="muted ml-2 text-xs">{t("sess.rpe", { n: fmt.num(s.rpe, 1) })}</span>
+                    ) : null}
                   </span>
                   {cmp === 1 ? <span className="text-accent text-sm font-semibold">↑</span> : null}
                   {cmp === 0 ? <span className="muted text-sm">=</span> : null}
@@ -518,8 +542,10 @@ function ExerciseCard({
 
       {readOnly && delta != null && best ? (
         <p className={`text-xs ${delta > 0 ? "text-accent" : "muted"}`}>
-          {delta > 0 ? "Framsteg" : delta === 0 ? "Samma som förra passet" : "Under förra passet"}
-          {delta !== 0 ? ` · ${delta > 0 ? "+" : "−"}${fmtNum(Math.abs(delta), 1)}${ex.tracking === "weight_reps" ? " kg 1RM" : ex.tracking === "reps_only" ? " reps" : ex.tracking === "time" ? " s" : " m"}` : ""}
+          {delta > 0 ? t("sess.progress") : delta === 0 ? t("sess.same") : t("sess.below")}
+          {delta !== 0
+            ? ` · ${delta > 0 ? "+" : "−"}${fmt.num(Math.abs(delta), 1)} ${t(`sess.unit.${ex.tracking}` as Key)}`
+            : ""}
         </p>
       ) : null}
 
@@ -527,52 +553,52 @@ function ExerciseCard({
         <div className="flex flex-col gap-2">
           <p className="muted text-xs">
             {editing
-              ? `Ändrar set ${editing.setNumber}`
+              ? t("sess.editing", { n: editing.setNumber })
               : done >= ex.targetSets
-                ? `Extra set ${nextNumber}`
-                : `Set ${nextNumber} av ${ex.targetSets}`}
+                ? t("sess.extra", { n: nextNumber })
+                : t("sess.setOf", { n: nextNumber, total: ex.targetSets })}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {ex.tracking === "weight_reps" || ex.tracking === "reps_only" ? (
               <>
                 <NumberInput
-                  label={ex.tracking === "reps_only" ? "Extra kg" : "Kilo"}
+                  label={ex.tracking === "reps_only" ? t("sess.extraKg") : t("sess.kg")}
                   value={inputs.weight}
                   step={2.5}
                   onChange={(v) => set({ weight: v })}
                 />
-                <NumberInput label="Reps" value={inputs.reps} step={1} integer onChange={(v) => set({ reps: v })} />
+                <NumberInput label={t("sess.reps")} value={inputs.reps} step={1} integer onChange={(v) => set({ reps: v })} />
               </>
             ) : null}
             {ex.tracking === "time" ? (
-              <TextInput label="Tid (s eller m:ss)" value={inputs.seconds} onChange={(v) => set({ seconds: v })} />
+              <TextInput label={t("sess.timeInput")} value={inputs.seconds} onChange={(v) => set({ seconds: v })} />
             ) : null}
             {ex.tracking === "distance" ? (
               <>
-                <NumberInput label="Meter" value={inputs.meters} step={100} integer onChange={(v) => set({ meters: v })} />
-                <TextInput label="Tid (valfritt)" value={inputs.seconds} onChange={(v) => set({ seconds: v })} />
+                <NumberInput label={t("sess.meters")} value={inputs.meters} step={100} integer onChange={(v) => set({ meters: v })} />
+                <TextInput label={t("sess.timeOptional")} value={inputs.seconds} onChange={(v) => set({ seconds: v })} />
               </>
             ) : null}
           </div>
 
           <details className="text-sm">
-            <summary className="muted cursor-pointer text-xs">Mer: typ av set och RPE</summary>
+            <summary className="muted cursor-pointer text-xs">{t("sess.more")}</summary>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="flex flex-col gap-1 text-xs">
-                <span className="muted">Typ</span>
+                <span className="muted">{t("sess.type")}</span>
                 <select className="input" value={inputs.setType} onChange={(e) => set({ setType: e.target.value as SetType })}>
-                  <option value="normal">Vanligt set</option>
-                  <option value="warmup">Uppvärmning</option>
-                  <option value="dropset">Dropset</option>
+                  <option value="normal">{t("sess.typeNormal")}</option>
+                  <option value="warmup">{t("sess.typeWarmup")}</option>
+                  <option value="dropset">{t("sess.typeDrop")}</option>
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-xs">
-                <span className="muted">RPE (1–10)</span>
+                <span className="muted">{t("sess.rpeLabel")}</span>
                 <select className="input" value={inputs.rpe} onChange={(e) => set({ rpe: e.target.value })}>
                   <option value="">—</option>
                   {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((n) => (
-                    <option key={n} value={String(n).replace(".", ",")}>
-                      {fmtNum(n, 1)}
+                    <option key={n} value={fmt.num(n, 1)}>
+                      {fmt.num(n, 1)}
                     </option>
                   ))}
                 </select>
@@ -586,7 +612,7 @@ function ExerciseCard({
             {editing ? (
               <>
                 <button type="button" className="btn" onClick={() => remove(editing)} disabled={busy}>
-                  Ta bort
+                  {t("common.remove")}
                 </button>
                 <button
                   type="button"
@@ -596,12 +622,12 @@ function ExerciseCard({
                     setError(null);
                   }}
                 >
-                  Avbryt
+                  {t("common.cancel")}
                 </button>
               </>
             ) : null}
             <button type="button" className="btn btn-primary flex-1" onClick={submit} disabled={busy}>
-              {busy ? "Sparar…" : editing ? "Spara ändring" : "Klart set"}
+              {busy ? t("common.saving") : editing ? t("sess.saveChange") : t("sess.logSet")}
             </button>
           </div>
         </div>
@@ -623,15 +649,22 @@ function NumberInput({
   integer?: boolean;
   onChange: (v: string) => void;
 }) {
+  const { t, fmt } = useI18n();
   const bump = (dir: 1 | -1) => {
     const base = decimal(value) ?? 0;
-    onChange(fmtNum(Math.max(0, base + dir * step), 2));
+    onChange(fmt.num(Math.max(0, base + dir * step), 2));
   };
   return (
     <label className="flex flex-col gap-1 text-xs">
       <span className="muted">{label}</span>
       <div className="flex items-stretch gap-1">
-        <button type="button" className="btn h-12 w-10 px-0" onClick={() => bump(-1)} aria-label={`Minska ${label}`} tabIndex={-1}>
+        <button
+          type="button"
+          className="btn h-12 w-10 px-0"
+          onClick={() => bump(-1)}
+          aria-label={t("sess.decrease", { label })}
+          tabIndex={-1}
+        >
           −
         </button>
         <input
@@ -641,7 +674,13 @@ function NumberInput({
           value={value}
           onChange={(e) => onChange(e.target.value.replace(integer ? /[^\d]/g : /[^\d.,]/g, ""))}
         />
-        <button type="button" className="btn h-12 w-10 px-0" onClick={() => bump(1)} aria-label={`Öka ${label}`} tabIndex={-1}>
+        <button
+          type="button"
+          className="btn h-12 w-10 px-0"
+          onClick={() => bump(1)}
+          aria-label={t("sess.increase", { label })}
+          tabIndex={-1}
+        >
           +
         </button>
       </div>

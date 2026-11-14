@@ -55,6 +55,11 @@ export async function POST(request: Request) {
   }
 
   clearFailures(key);
+
+  // Rätt lösenord men ännu inte godkänd. Säger vi det före lösenordskontrollen skulle
+  // vem som helst kunna se vilka användarnamn som väntar.
+  if (user.status !== "approved") return fail("pending", username);
+
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
 
   const store = await cookies();

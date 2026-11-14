@@ -39,10 +39,14 @@ export const users = pgTable(
     passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true }),
     name: text("name"),
     role: text("role").notNull().default("member"), // member | admin
+    /** pending = väntar på admins godkännande och kan inte logga in; approved = fullt konto. */
+    status: text("status").notNull().default("approved"), // pending | approved
+    /** Fritext från registreringen så att admin ser vem förfrågan kommer från. */
+    signupNote: text("signup_note"),
     createdAt: createdAt(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   },
-  (t) => [uniqueIndex("users_username_ux").on(t.username)],
+  (t) => [uniqueIndex("users_username_ux").on(t.username), index("users_status_ix").on(t.status)],
 );
 
 export const userSettings = pgTable("user_settings", {

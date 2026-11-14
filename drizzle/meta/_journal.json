@@ -15,6 +15,13 @@
       "when": 1794660139097,
       "tag": "0001_cloudy_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794668734526,
+      "tag": "0002_needy_gravity",
+      "breakpoints": true
     }
   ]
 }

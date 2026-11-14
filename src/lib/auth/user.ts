@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { getDb } from "@/lib/db";
 import { userSettings, users } from "@/lib/db/schema";
 import { SESSION_COOKIE } from "./config";
@@ -13,8 +14,11 @@ export interface SessionUser {
   settings: typeof userSettings.$inferSelect;
 }
 
-/** Null när ingen giltig session finns. Anropas i server components och routes. */
-export async function getCurrentUser(): Promise<SessionUser | null> {
+/**
+ * Null när ingen giltig session finns. Anropas i server components och routes.
+ * `cache` gör att layout och sida delar ett uppslag per förfrågan.
+ */
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -32,6 +36,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   const row = rows[0];
   if (!row) return null;
+
+  // Ett konto som väntar på godkännande har ingen session; den här kontrollen gäller
+  // även om en token skulle ha utfärdats på annat sätt.
+  if (row.user.status !== "approved") return null;
 
   // Byt lösenord ⇒ äldre sessioner slutar gälla. `iat` har sekundupplösning, så
   // en token som utfärdats i samma sekund som bytet får leva en sekund till.
@@ -58,7 +66,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     role: row.user.role === "admin" ? "admin" : "member",
     settings,
   };
-}
+});
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();

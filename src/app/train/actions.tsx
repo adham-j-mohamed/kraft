@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n/client";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
@@ -16,6 +17,7 @@ export function StartButton({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,9 +33,9 @@ export function StartButton({
       const data = await res.json().catch(() => ({}));
       if (res.ok) return router.push(`/train/session/${data.id}`);
       if (res.status === 409 && data.sessionId) return router.push(`/train/session/${data.sessionId}`);
-      setError(data.error === "empty_workout" ? "Passet har inga övningar. Redigera programmet." : "Kunde inte starta passet.");
+      setError(data.error === "empty_workout" ? t("train.err.emptyWorkout") : t("train.err.start"));
     } catch {
-      setError("Ingen kontakt med servern.");
+      setError(t("common.noContact"));
     } finally {
       setBusy(false);
     }
@@ -42,19 +44,20 @@ export function StartButton({
   return (
     <div className="flex flex-col gap-1.5">
       <button className={`btn ${primary ? "btn-primary" : ""} w-full`} onClick={start} disabled={busy} type="button">
-        {busy ? "Startar…" : children}
+        {busy ? t("train.starting") : children}
       </button>
       {error ? <p className="text-danger text-xs">{error}</p> : null}
     </div>
   );
 }
 
-export function AbandonButton({ sessionId, label = "Avbryt passet" }: { sessionId: string; label?: string }) {
+export function AbandonButton({ sessionId, label }: { sessionId: string; label?: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
 
   async function abandon() {
-    if (!confirm("Avbryta passet? Det sparas inte i historiken och rotationen ändras inte.")) return;
+    if (!confirm(t("train.abandonConfirm"))) return;
     setBusy(true);
     try {
       await fetch(`/api/sessions/${sessionId}`, {
@@ -70,7 +73,7 @@ export function AbandonButton({ sessionId, label = "Avbryt passet" }: { sessionI
 
   return (
     <button className="btn w-full" onClick={abandon} disabled={busy} type="button">
-      {label}
+      {label ?? t("train.abandon")}
     </button>
   );
 }

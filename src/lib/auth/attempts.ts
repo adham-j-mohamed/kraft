@@ -50,3 +50,24 @@ export function recordFailure(key: string): void {
 export function clearFailures(key: string): void {
   failures.delete(key);
 }
+
+/**
+ * Allmän hastighetsgräns: tillåter högst `max` träffar per `windowMs` för en nyckel.
+ * Returnerar false när gränsen är nådd. Används för registreringar per IP-adress.
+ */
+const hits = new Map<string, Entry>();
+
+export function allowHit(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  if (hits.size >= 512) {
+    for (const [k, entry] of hits) if (entry.resetAt <= now) hits.delete(k);
+  }
+  const entry = hits.get(key);
+  if (!entry || entry.resetAt <= now) {
+    hits.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= max) return false;
+  entry.count += 1;
+  return true;
+}

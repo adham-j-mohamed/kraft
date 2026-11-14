@@ -3,6 +3,8 @@
  * (hård regel 3): en rad som tillhör ett annat konto ska se ut som om den inte finns.
  */
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { swedishNamesMatching } from "@/lib/i18n/exercises";
+import { intlTag, type Locale } from "@/lib/i18n/locales";
 import { getDb } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db/errors";
 import {
@@ -47,8 +49,18 @@ function toSet(row: typeof sessionSets.$inferSelect): SetDTO {
   };
 }
 
-function dateLabel(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", timeZone }).format(date);
+/** Tidszon och språk för datumetiketter som byggs på servern. */
+export interface DateCtx {
+  timeZone: string;
+  locale: Locale;
+}
+
+function dateLabel(date: Date, ctx: DateCtx): string {
+  return new Intl.DateTimeFormat(intlTag(ctx.locale), {
+    day: "numeric",
+    month: "short",
+    timeZone: ctx.timeZone,
+  }).format(date);
 }
 
 const visibleTo = (userId: string) => or(isNull(exercises.userId), eq(exercises.userId, userId));
@@ -70,10 +82,19 @@ export async function listExercises(userId: string, opts: { q?: string; limit?: 
   const db = getDb();
   const q = opts.q?.trim();
   const escaped = q?.replace(/[\\%_]/g, (c) => `\\${c}`);
+  // Engelska sökord ska också hitta de svenska namnen i databasen.
+  const matched = q ? swedishNamesMatching(q) : [];
   const rows = await db
     .select()
     .from(exercises)
-    .where(and(visibleTo(userId), escaped ? ilike(exercises.name, `%${escaped}%`) : undefined))
+    .where(
+      and(
+        visibleTo(userId),
+        escaped
+          ? or(ilike(exercises.name, `%${escaped}%`), matched.length ? inArray(exercises.name, matched) : undefined)
+          : undefined,
+      ),
+    )
     .orderBy(asc(exercises.muscleGroup), asc(exercises.name))
     .limit(Math.min(opts.limit ?? 60, 200));
   return rows.map(toRef);
@@ -373,7 +394,7 @@ export async function previousFor(
   userId: string,
   items: { exerciseId: string; tracking: Tracking }[],
   before: Date,
-  timeZone: string,
+  ctx: DateCtx,
 ): Promise<Map<string, PrevPerformance>> {
   const out = new Map<string, PrevPerformance>();
   if (items.length === 0) return out;
@@ -412,7 +433,7 @@ export async function previousFor(
     out.set(l.exerciseId, {
       sessionId: l.sessionId,
       startedAt: l.startedAt.toISOString(),
-      dateLabel: dateLabel(l.startedAt, timeZone),
+      dateLabel: dateLabel(l.startedAt, ctx),
       sets,
       best: bestOf(sets, trackingOf.get(l.exerciseId) ?? "weight_reps"),
     });
@@ -420,7 +441,7 @@ export async function previousFor(
   return out;
 }
 
-export async function loadSession(userId: string, sessionId: string, timeZone: string): Promise<SessionDTO | null> {
+export async function loadSession(userId: string, sessionId: string, ctx: DateCtx): Promise<SessionDTO | null> {
   const db = getDb();
   const [s] = await db
     .select()
@@ -445,7 +466,7 @@ export async function loadSession(userId: string, sessionId: string, timeZone: s
     userId,
     items.map((i) => ({ exerciseId: i.exerciseId, tracking: i.tracking as Tracking })),
     s.startedAt,
-    timeZone,
+    ctx,
   );
 
   return {
@@ -657,7 +678,7 @@ export interface ExerciseHistory {
 export async function exerciseHistory(
   userId: string,
   exerciseId: string,
-  timeZone: string,
+  ctx: DateCtx,
   limit = 100,
 ): Promise<ExerciseHistory | null> {
   const exercise = await getExercise(userId, exerciseId);
@@ -699,7 +720,7 @@ export async function exerciseHistory(
     return {
       sessionId: r.sessionId,
       startedAt: r.startedAt.toISOString(),
-      dateLabel: dateLabel(r.startedAt, timeZone),
+      dateLabel: dateLabel(r.startedAt, ctx),
       workoutName: r.workoutName,
       tracking,
       sets,
@@ -726,7 +747,7 @@ export interface RecentSession {
   volumeKg: number;
 }
 
-export async function recentSessions(userId: string, timeZone: string, limit = 8): Promise<RecentSession[]> {
+export async function recentSessions(userId: string, ctx: DateCtx, limit = 8): Promise<RecentSession[]> {
   const rows = await getDb()
     .select({
       id: sessions.id,
@@ -746,7 +767,7 @@ export async function recentSessions(userId: string, timeZone: string, limit = 8
     id: r.id,
     workoutName: r.workoutName,
     startedAt: r.startedAt.toISOString(),
-    dateLabel: dateLabel(r.startedAt, timeZone),
+    dateLabel: dateLabel(r.startedAt, ctx),
     sets: Number(r.sets),
     volumeKg: Math.round(Number(r.volume)),
   }));

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/user";
+import { getLocale } from "@/lib/i18n/server";
 import { loadSession } from "@/lib/training/queries";
 import { SessionLogger } from "./SessionLogger";
 
@@ -12,7 +13,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   // Ogiltigt uuid-format ger ett databasfel; behandla det som "finns inte".
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
-  const session = await loadSession(user.id, id, user.settings.timezone);
+  const session = await loadSession(user.id, id, { timeZone: user.settings.timezone, locale: await getLocale() });
   if (!session) notFound();
 
   // `key` på status gör att komponenten startar om i läsläge när passet avslutas.

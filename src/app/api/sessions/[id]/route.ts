@@ -1,4 +1,5 @@
 import { authed, jsonError, readJson } from "@/lib/api";
+import { getLocale } from "@/lib/i18n/server";
 import { finishSession, loadSession } from "@/lib/training/queries";
 import { finishSessionInput } from "@/lib/training/validate";
 
@@ -9,7 +10,10 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function GET(request: Request, { params }: Ctx) {
   const a = await authed(request);
   if ("error" in a) return a.error;
-  const session = await loadSession(a.user.id, (await params).id, a.user.settings.timezone);
+  const session = await loadSession(a.user.id, (await params).id, {
+    timeZone: a.user.settings.timezone,
+    locale: await getLocale(),
+  });
   if (!session) return jsonError("not_found", 404);
   return Response.json({ session });
 }

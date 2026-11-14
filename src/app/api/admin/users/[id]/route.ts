@@ -41,6 +41,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const form = await request.formData();
   const action = String(form.get("action") ?? "");
 
+  if (action === "approve" || action === "reject") {
+    if (target.status !== "pending") return back("error_not_pending");
+    if (action === "approve") {
+      await db.update(users).set({ status: "approved" }).where(eq(users.id, id));
+      return back("ok_approve");
+    }
+    // Avslag raderar förfrågan så att användarnamnet blir ledigt igen.
+    await db.delete(users).where(eq(users.id, id));
+    return back("ok_reject");
+  }
+
   if (action === "reset_password") {
     const password = String(form.get("password") ?? "");
     if (validatePassword(password)) return back("error_password");

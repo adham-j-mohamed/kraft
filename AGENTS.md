@@ -43,7 +43,8 @@ filen gäller allt arbete i repot.
 |---|---|
 | `src/app` | sidor och API-routes (App Router) |
 | `src/lib/db/schema.ts` | datamodellen, enda källan till sanning |
-| `src/lib/auth` | lösenordshash (scrypt), sessioner, inloggning, behörighetsregler |
+| `src/lib/auth` | lösenordshash (scrypt), sessioner, inloggning, behörighetsregler, väntande konton (`pending.ts`) |
+| `src/lib/i18n` | språkval (kaka `kraft_lang`, annars enhetens `Accept-Language`), ordlistor, övningsnamn |
 | `src/lib/nutrition.ts` | BMR, TDEE, makrofördelning, 1RM |
 | `src/lib/training` | träningsdelen: frågor (`queries.ts`), validering (zod), typer och progressionslogik som även klienten använder |
 | `src/lib/api.ts` | gemensam ingång för JSON-routes: origin-kontroll, session, zod-parsning |
@@ -55,7 +56,11 @@ filen gäller allt arbete i repot.
 
 ## Arbetssätt
 
-- Skriv på svenska i kod-kommentarer och UI; README på engelska eftersom repot är
+- Alla texter i gränssnittet ligger i `src/lib/i18n/dictionaries.ts` på svenska **och** engelska
+  (typen tvingar samma nycklar). Skriv aldrig en användarvänd text direkt i en komponent. Plural
+  skrivs `_one`/`_other` och slås upp med `tn`. Seedade övningar översätts vid visning i
+  `src/lib/i18n/exercises.ts`; databasen behåller de svenska namnen.
+- Skriv på svenska i kod-kommentarer; README på engelska eftersom repot är
   öppen källkod.
 - Ett steg i taget, med en commit per steg.
 - När ett steg är klart: verifiera med kommando och siffror, inte med påståenden.

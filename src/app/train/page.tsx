@@ -7,7 +7,7 @@ import {
   nextWorkoutOf,
   recentSessions,
 } from "@/lib/training/queries";
-import { fmtNum, fmtTarget } from "@/lib/training/types";
+import { getI18n } from "@/lib/i18n/server";
 import { AbandonButton, StartButton } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +16,11 @@ export default async function TrainPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/train");
 
-  const tz = user.settings.timezone;
+  const { t, tn, locale, fmt, exName } = await getI18n();
   const [program, active, recent] = await Promise.all([
     getActiveProgram(user.id),
     getActiveSession(user.id),
-    recentSessions(user.id, tz),
+    recentSessions(user.id, { timeZone: user.settings.timezone, locale }),
   ]);
   const next = program ? nextWorkoutOf(program) : null;
 
@@ -28,22 +28,22 @@ export default async function TrainPage() {
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-10 pt-6">
       <header className="flex items-center justify-between">
         <div>
-          <p className="muted text-xs uppercase tracking-wide">Träning</p>
-          <h1 className="text-2xl font-semibold">{program ? program.name : "Inget program än"}</h1>
+          <p className="muted text-xs uppercase tracking-wide">{t("train.label")}</p>
+          <h1 className="text-2xl font-semibold">{program ? program.name : t("train.noProgram")}</h1>
         </div>
         <Link className="btn px-4 py-2 text-sm" href="/">
-          Hem
+          {t("common.home")}
         </Link>
       </header>
 
       {active ? (
         <section className="card flex flex-col gap-3 border-accent/50">
           <div>
-            <p className="muted text-xs uppercase tracking-wide">Pågående pass</p>
+            <p className="muted text-xs uppercase tracking-wide">{t("train.ongoing")}</p>
             <p className="text-xl font-semibold">{active.workoutName}</p>
           </div>
           <Link className="btn btn-primary w-full" href={`/train/session/${active.id}`}>
-            Fortsätt passet
+            {t("train.continue")}
           </Link>
           <AbandonButton sessionId={active.id} />
         </section>
@@ -51,12 +51,9 @@ export default async function TrainPage() {
 
       {!program ? (
         <section className="card flex flex-col gap-3">
-          <p className="text-sm">
-            Ett program är de pass du roterar mellan, till exempel Pass A, B och C. Varje pass har
-            övningar med set och reps. Appen föreslår vilket pass som står på tur.
-          </p>
+          <p className="text-sm">{t("train.intro")}</p>
           <Link className="btn btn-primary w-full" href="/train/program">
-            Skapa program
+            {t("train.createProgram")}
           </Link>
         </section>
       ) : (
@@ -64,27 +61,27 @@ export default async function TrainPage() {
           {!active && next ? (
             <section className="card flex flex-col gap-3">
               <div>
-                <p className="muted text-xs uppercase tracking-wide">Nästa pass</p>
+                <p className="muted text-xs uppercase tracking-wide">{t("train.next")}</p>
                 <p className="text-2xl font-semibold">{next.name}</p>
               </div>
               <ul className="flex flex-col gap-1 text-sm">
                 {next.exercises.map((e) => (
                   <li key={e.exerciseId + e.name} className="flex justify-between gap-3">
-                    <span>{e.name}</span>
-                    <span className="muted tabular-nums">{fmtTarget(e)}</span>
+                    <span>{exName(e.name)}</span>
+                    <span className="muted tabular-nums">{fmt.target(e)}</span>
                   </li>
                 ))}
-                {next.exercises.length === 0 ? <li className="muted">Inga övningar än.</li> : null}
+                {next.exercises.length === 0 ? <li className="muted">{t("train.noExercises")}</li> : null}
               </ul>
               <StartButton workoutId={next.id} primary>
-                Starta {next.name}
+                {t("train.start", { name: next.name })}
               </StartButton>
             </section>
           ) : null}
 
           <section className="card flex flex-col gap-3">
             <p className="muted text-xs uppercase tracking-wide">
-              Rotation · {program.workouts.length} pass
+              {tn("train.rotation", program.workouts.length)}
             </p>
             <ol className="flex flex-col gap-2">
               {program.workouts.map((w) => {
@@ -99,26 +96,22 @@ export default async function TrainPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">
                         {w.name}
-                        {isNext ? <span className="text-accent ml-2 text-xs">på tur</span> : null}
+                        {isNext ? <span className="text-accent ml-2 text-xs">{t("train.onTurn")}</span> : null}
                       </p>
-                      <p className="muted truncate text-xs">
-                        {w.exercises.length} övningar
-                      </p>
+                      <p className="muted truncate text-xs">{tn("train.exercises", w.exercises.length)}</p>
                     </div>
                     {!active ? (
                       <div className="w-24 shrink-0">
-                        <StartButton workoutId={w.id}>Starta</StartButton>
+                        <StartButton workoutId={w.id}>{t("train.startShort")}</StartButton>
                       </div>
                     ) : null}
                   </li>
                 );
               })}
             </ol>
-            <p className="muted text-xs">
-              Du kan alltid välja ett annat pass. Rotationen flyttas först när ett pass avslutas.
-            </p>
+            <p className="muted text-xs">{t("train.pickAny")}</p>
             <Link className="btn w-full" href="/train/program">
-              Redigera program
+              {t("train.editProgram")}
             </Link>
           </section>
         </>
@@ -126,7 +119,7 @@ export default async function TrainPage() {
 
       {recent.length > 0 ? (
         <section className="card flex flex-col gap-2">
-          <p className="muted text-xs uppercase tracking-wide">Senaste passen</p>
+          <p className="muted text-xs uppercase tracking-wide">{t("train.recent")}</p>
           <ul className="flex flex-col divide-y divide-line">
             {recent.map((s) => (
               <li key={s.id}>
@@ -136,8 +129,8 @@ export default async function TrainPage() {
                     <span className="muted text-xs">{s.dateLabel}</span>
                   </span>
                   <span className="muted text-right text-xs tabular-nums">
-                    {s.sets} set
-                    {s.volumeKg > 0 ? ` · ${fmtNum(s.volumeKg, 0)} kg` : ""}
+                    {tn("fmt.sets", s.sets)}
+                    {s.volumeKg > 0 ? ` · ${fmt.num(s.volumeKg, 0)} kg` : ""}
                   </span>
                 </Link>
               </li>
