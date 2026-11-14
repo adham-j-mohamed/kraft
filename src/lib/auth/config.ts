@@ -1,6 +1,4 @@
 export const SESSION_COOKIE = "kraft_session";
-export const STATE_COOKIE = "kraft_oauth_state";
-export const VERIFIER_COOKIE = "kraft_oauth_verifier";
 export const SESSION_DAYS = 60;
 
 export function appUrl(): string {
@@ -17,11 +15,9 @@ export function cookieSecure(): boolean {
   return appUrl().startsWith("https://");
 }
 
-export function googleCredentials(): { clientId: string; clientSecret: string } {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET saknas");
-  }
-  return { clientId, clientSecret };
+/** Bara relativa sökvägar som mål efter inloggning — aldrig en främmande adress. */
+export function safeNext(raw: string | null | undefined): string {
+  const value = (raw ?? "").trim();
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return "/";
+  return value;
 }

@@ -61,3 +61,23 @@ body {
 .muted {
   color: var(--color-muted);
 }
+
+.input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-size: 16px; /* 16px hindrar Safari på iOS från att zooma in i fältet */
+}
+
+.input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.input::placeholder {
+  color: var(--color-muted);
+}

@@ -7,9 +7,8 @@ export async function GET() {
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   return Response.json({
     id: user.id,
-    email: user.email,
+    username: user.username,
     name: user.name,
-    avatarUrl: user.avatarUrl,
     role: user.role,
     settings: user.settings,
   });

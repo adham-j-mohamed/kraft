@@ -34,32 +34,15 @@ export const users = pgTable(
   "users",
   {
     id: id(),
-    googleSub: text("google_sub").notNull(),
-    email: text("email").notNull(),
+    username: text("username").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true }),
     name: text("name"),
-    avatarUrl: text("avatar_url"),
     role: text("role").notNull().default("member"), // member | admin
     createdAt: createdAt(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   },
-  (t) => [
-    uniqueIndex("users_google_sub_ux").on(t.googleSub),
-    uniqueIndex("users_email_ux").on(t.email),
-  ],
-);
-
-/** Inbjudningar: bara adresser här (eller redan skapade konton) får logga in. */
-export const invites = pgTable(
-  "invites",
-  {
-    id: id(),
-    email: text("email").notNull(),
-    invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
-    createdAt: createdAt(),
-    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  },
-  (t) => [uniqueIndex("invites_email_ux").on(t.email)],
+  (t) => [uniqueIndex("users_username_ux").on(t.username)],
 );
 
 export const userSettings = pgTable("user_settings", {

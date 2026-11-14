@@ -52,15 +52,6 @@ CREATE TABLE "foods" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "invites" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" text NOT NULL,
-	"invited_by" uuid,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"accepted_at" timestamp with time zone,
-	"revoked_at" timestamp with time zone
-);
---> statement-breakpoint
 CREATE TABLE "meal_template_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"template_id" uuid NOT NULL,
@@ -150,10 +141,10 @@ CREATE TABLE "user_settings" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"google_sub" text NOT NULL,
-	"email" text NOT NULL,
+	"username" text NOT NULL,
+	"password_hash" text NOT NULL,
+	"password_updated_at" timestamp with time zone,
 	"name" text,
-	"avatar_url" text,
 	"role" text DEFAULT 'member' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"last_login_at" timestamp with time zone
@@ -195,7 +186,6 @@ ALTER TABLE "food_favorites" ADD CONSTRAINT "food_favorites_food_id_foods_id_fk"
 ALTER TABLE "food_log" ADD CONSTRAINT "food_log_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "food_log" ADD CONSTRAINT "food_log_food_id_foods_id_fk" FOREIGN KEY ("food_id") REFERENCES "public"."foods"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "foods" ADD CONSTRAINT "foods_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_users_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "meal_template_items" ADD CONSTRAINT "meal_template_items_template_id_meal_templates_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."meal_templates"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "meal_template_items" ADD CONSTRAINT "meal_template_items_food_id_foods_id_fk" FOREIGN KEY ("food_id") REFERENCES "public"."foods"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "meal_templates" ADD CONSTRAINT "meal_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -220,7 +210,6 @@ CREATE INDEX "food_log_user_day_ix" ON "food_log" USING btree ("user_id","logged
 CREATE UNIQUE INDEX "foods_user_barcode_ux" ON "foods" USING btree ("user_id","barcode") WHERE "foods"."barcode" is not null and "foods"."user_id" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "foods_global_barcode_ux" ON "foods" USING btree ("barcode") WHERE "foods"."barcode" is not null and "foods"."user_id" is null;--> statement-breakpoint
 CREATE INDEX "foods_name_ix" ON "foods" USING btree ("name");--> statement-breakpoint
-CREATE UNIQUE INDEX "invites_email_ux" ON "invites" USING btree ("email");--> statement-breakpoint
 CREATE UNIQUE INDEX "meal_templates_user_name_ux" ON "meal_templates" USING btree ("user_id","name");--> statement-breakpoint
 CREATE UNIQUE INDEX "program_workouts_pos_ux" ON "program_workouts" USING btree ("program_id","position");--> statement-breakpoint
 CREATE INDEX "programs_user_ix" ON "programs" USING btree ("user_id");--> statement-breakpoint
@@ -229,8 +218,7 @@ CREATE UNIQUE INDEX "session_sets_client_ux" ON "session_sets" USING btree ("cli
 CREATE UNIQUE INDEX "session_sets_pos_ux" ON "session_sets" USING btree ("session_exercise_id","set_number");--> statement-breakpoint
 CREATE UNIQUE INDEX "sessions_client_ux" ON "sessions" USING btree ("client_id");--> statement-breakpoint
 CREATE INDEX "sessions_user_ix" ON "sessions" USING btree ("user_id","started_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "users_google_sub_ux" ON "users" USING btree ("google_sub");--> statement-breakpoint
-CREATE UNIQUE INDEX "users_email_ux" ON "users" USING btree ("email");--> statement-breakpoint
+CREATE UNIQUE INDEX "users_username_ux" ON "users" USING btree ("username");--> statement-breakpoint
 CREATE UNIQUE INDEX "water_log_day_ux" ON "water_log" USING btree ("user_id","logged_on");--> statement-breakpoint
 CREATE UNIQUE INDEX "weight_log_day_ux" ON "weight_log" USING btree ("user_id","logged_on");--> statement-breakpoint
 CREATE UNIQUE INDEX "workout_exercises_pos_ux" ON "workout_exercises" USING btree ("workout_id","position");

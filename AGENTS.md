@@ -43,7 +43,7 @@ filen gäller allt arbete i repot.
 |---|---|
 | `src/app` | sidor och API-routes (App Router) |
 | `src/lib/db/schema.ts` | datamodellen, enda källan till sanning |
-| `src/lib/auth` | Google OAuth, sessionskrypto, behörighetsregler |
+| `src/lib/auth` | lösenordshash (scrypt), sessioner, inloggning, behörighetsregler |
 | `src/lib/nutrition.ts` | BMR, TDEE, makrofördelning, 1RM |
 | `scripts/migrate.mjs` | migrationer vid start/engångskörning |
 | `scripts/seed.mjs` | globala övningar och livsmedel, idempotent |

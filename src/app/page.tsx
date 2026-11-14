@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth/user";
@@ -27,13 +28,18 @@ export default async function DashboardPage() {
       <header className="flex items-center justify-between">
         <div>
           <p className="muted text-xs">{today}</p>
-          <h1 className="text-2xl font-semibold">Hej {user.name ?? user.email}</h1>
+          <h1 className="text-2xl font-semibold">Hej {user.name ?? user.username}</h1>
         </div>
-        <form action="/api/auth/signout" method="post">
-          <button className="btn px-4 py-2 text-sm" type="submit">
-            Logga ut
-          </button>
-        </form>
+        <div className="flex gap-2">
+          <Link className="btn px-4 py-2 text-sm" href="/settings">
+            Inställningar
+          </Link>
+          {user.role === "admin" ? (
+            <Link className="btn px-4 py-2 text-sm" href="/admin/users">
+              Användare
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <section className="card flex flex-col gap-1">
@@ -62,7 +68,9 @@ export default async function DashboardPage() {
         <p className="muted text-xs uppercase tracking-wide">Status</p>
         <ul className="mt-2 space-y-1">
           <li>Databas: ansluten ({status.rows[0]?.now.slice(0, 16)})</li>
-          <li>Inloggning: {user.role === "admin" ? "admin" : "medlem"}</li>
+          <li>
+            Inloggning: {user.username} ({user.role === "admin" ? "admin" : "medlem"})
+          </li>
           <li>Mat: dagbok och streckkod byggs efter träningen</li>
         </ul>
       </section>

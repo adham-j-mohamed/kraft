@@ -7,9 +7,8 @@ import { verifySessionToken } from "./session";
 
 export interface SessionUser {
   id: string;
-  email: string;
+  username: string;
   name: string | null;
-  avatarUrl: string | null;
   role: "admin" | "member";
   settings: typeof userSettings.$inferSelect;
 }
@@ -19,8 +18,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const userId = await verifySessionToken(token);
-  if (!userId) return null;
+  const session = await verifySessionToken(token);
+  if (!session) return null;
+  const userId = session.userId;
 
   const db = getDb();
   const rows = await db
@@ -32,6 +32,12 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   const row = rows[0];
   if (!row) return null;
+
+  // Byt lösenord ⇒ äldre sessioner slutar gälla. `iat` har sekundupplösning, så
+  // en token som utfärdats i samma sekund som bytet får leva en sekund till.
+  if (row.user.passwordUpdatedAt && row.user.passwordUpdatedAt.getTime() > (session.issuedAt + 1) * 1000) {
+    return null;
+  }
 
   // Första inloggningen skapar inställningsraden; här self-healar vi om den saknas.
   let settings = row.settings;
@@ -47,9 +53,8 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   return {
     id: row.user.id,
-    email: row.user.email,
+    username: row.user.username,
     name: row.user.name,
-    avatarUrl: row.user.avatarUrl,
     role: row.user.role === "admin" ? "admin" : "member",
     settings,
   };
@@ -58,5 +63,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) throw new Response("unauthorized", { status: 401 });
+  return user;
+}
+
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (user.role !== "admin") throw new Response("forbidden", { status: 403 });
   return user;
 }
