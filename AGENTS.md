@@ -11,7 +11,7 @@ filen gäller allt arbete i repot.
   3,2 GB RAM). Bygget sker på servern, aldrig på Macen.
 - Servern är alltid på; Macen sover. Därför är servern värd för allt som ska
   svara.
-- Publik adress: `tracker.jmohamed.se` via Cloudflare-tunneln `aj-lab`. Ingen
+- Publik adress: `kraft.jmohamed.se` via Cloudflare-tunneln `aj-lab`. Ingen
   Cloudflare Access — appen har egen inloggning.
 
 ## Hårda regler
