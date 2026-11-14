@@ -45,6 +45,9 @@ filen gäller allt arbete i repot.
 | `src/lib/db/schema.ts` | datamodellen, enda källan till sanning |
 | `src/lib/auth` | lösenordshash (scrypt), sessioner, inloggning, behörighetsregler |
 | `src/lib/nutrition.ts` | BMR, TDEE, makrofördelning, 1RM |
+| `src/lib/training` | träningsdelen: frågor (`queries.ts`), validering (zod), typer och progressionslogik som även klienten använder |
+| `src/lib/api.ts` | gemensam ingång för JSON-routes: origin-kontroll, session, zod-parsning |
+| `src/app/train` | översikt, programredigerare, passlogger och historik per övning |
 | `scripts/migrate.mjs` | migrationer vid start/engångskörning |
 | `scripts/seed.mjs` | globala övningar och livsmedel, idempotent |
 | `drizzle/` | genererade SQL-migrationer, committas |

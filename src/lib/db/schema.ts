@@ -187,6 +187,15 @@ export const sessionExercises = pgTable(
       .references(() => exercises.id, { onDelete: "restrict" }),
     position: integer("position").notNull(),
     restSeconds: integer("rest_seconds").notNull().default(90),
+    /** Frysta kopior från programmet när passet startade (hård regel 4). */
+    exerciseName: text("exercise_name").notNull().default(""),
+    tracking: text("tracking").notNull().default("weight_reps"),
+    targetSets: integer("target_sets").notNull().default(3),
+    targetRepsLow: integer("target_reps_low"),
+    targetRepsHigh: integer("target_reps_high"),
+    targetSeconds: integer("target_seconds"),
+    targetMeters: integer("target_meters"),
+    supersetGroup: integer("superset_group"),
   },
   (t) => [uniqueIndex("session_exercises_pos_ux").on(t.sessionId, t.position)],
 );
