@@ -21,10 +21,14 @@ Safari and it runs full screen with the camera available.
 **Food**
 - Diary per day and meal, calories and macros, target computed from body data
   (Mifflin-St Jeor plus activity level) or set manually.
-- Barcode scanning with the camera. Product data comes from Open Food Facts,
+- Barcode scanning with the camera (planned). Product data comes from Open Food Facts,
   cached locally so repeat scans are instant and work offline.
-- Own foods, favorites, meal templates, water, weight with trend, streaks and a
-  weekly view.
+- Own foods (private per account), favorites, recently used, quick-add calories,
+  water, weight with a seven-day average, and a weekly view with workouts.
+- Goals are computed live from height, weight, age, sex, activity and a weekly
+  weight rate (never below 1,200 kcal), or entered manually. All numbers are
+  approximate and shown as such; this is not medical advice.
+- Not built yet: barcode scanning, meal templates, streaks.
 
 **Accounts**
 - Username and password. No third-party sign-in. Anyone can request an account
@@ -104,8 +108,9 @@ only. There is no analytics, no third-party script and no tracking.
 
 ## Status
 
-Early. Training and food logging are being built in this order: schema and
-auth (done) → training → food → barcode → offline and PWA polish.
+Early. Built in this order: schema and auth (done) → training (done) → food diary,
+goals, water, weight and week view (done) → barcode scanning → offline and PWA
+polish.
 
 ## License
 

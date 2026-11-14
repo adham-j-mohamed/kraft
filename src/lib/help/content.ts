@@ -170,6 +170,40 @@ const sv: HelpContent = {
       ],
     },
     {
+      id: "mat",
+      title: "Mat och kalorier",
+      summary: "Logga mat, mål, vatten och vikt",
+      blocks: [
+        {
+          t: "steps",
+          items: [
+            "Tryck **Mat** på startsidan och sedan **+ Lägg till** vid måltiden.",
+            "Sök livsmedel (på svenska eller engelska), eller välj under **Senast använda** och **Favoriter** (stjärnan).",
+            "Välj mängd i **gram** eller **portioner**. Kalorier och makron räknas ut medan du skriver.",
+            "Tryck **Lägg till**. Du hamnar tillbaka på dagen.",
+          ],
+        },
+        {
+          t: "list",
+          items: [
+            "**Hittar du inte maten?** Skapa ett **eget livsmedel** (värden per 100 g; det syns bara för dig) eller använd **Snabblogga kalorier**, till exempel för en lunch ute.",
+            "**Ändra eller ta bort:** tryck på en loggad post. Ändrar du mängden skalas kalorier och makron med.",
+            "**Bläddra:** pilarna ‹ › byter dag. **Veckan** visar kalorier mot mål, protein, träningspass och vikt per dag.",
+            "**Vatten:** knapparna +250 och +500 ml. **Vikt:** skriv in dagens vikt; appen visar sjudagarssnitt, eftersom enstaka vägningar svänger.",
+          ],
+        },
+        {
+          t: "p",
+          text: "**Mål:** Mat → Mål (eller Inställningar). Välj att få dem uträknade ur längd, vikt, ålder, kön och aktivitetsnivå, eller skriv in egna. Uträkningen använder Mifflin–St Jeor och din veckotakt för vikten (1 kg kroppsfett ≈ 7 700 kcal). Protein sätts till 1,8 g per kilo, fett till 25 % av energin (minst 0,6 g per kilo) och resten blir kolhydrater. Målet går aldrig under 1 200 kcal, och det räknas om direkt när du loggar en ny vikt.",
+        },
+        {
+          t: "tip",
+          text: "Alla siffror är ungefärliga. Näringsdata och portioner varierar, och appen kan inte veta exakt vad du åt. Använd målet som riktning och titta på veckotrenden snarare än en enskild dag. Vid sjukdom, graviditet eller extrema mål: fråga vården.",
+        },
+      ],
+      cta: { href: "/food", label: "Öppna matloggen" },
+    },
+    {
       id: "utseende",
       title: "Språk och tema",
       summary: "Svenska/engelska och mörkt/ljust",
@@ -210,7 +244,7 @@ const sv: HelpContent = {
       blocks: [
         {
           t: "p",
-          text: "Kraft körs på en egen server hemma, inte hos ett molnbolag. Det som sparas är användarnamn, ett hashat lösenord (aldrig i klartext), dina program, pass och set, samt inställningar som språk, tema och tidszon. Det finns ingen reklam och ingen spårning. Andra användare kan inte se din träning. Administratören driver servern och kan tekniskt komma åt databasen.",
+          text: "Kraft körs på en egen server hemma, inte hos ett molnbolag. Det som sparas är användarnamn, ett hashat lösenord (aldrig i klartext), dina program, pass och set, loggad mat, vikt och vatten, samt inställningar som språk, tema, mål och tidszon. Det finns ingen reklam och ingen spårning. Andra användare kan inte se din träning. Administratören driver servern och kan tekniskt komma åt databasen.",
         },
         { t: "p", text: "Vill du bort? Be en admin ta bort ditt konto. Då raderas allt som hör till det." },
       ],
@@ -243,11 +277,20 @@ const sv: HelpContent = {
       q: "Kan jag använda appen på flera enheter?",
       a: "Ja. Logga in med samma konto. Allt ligger på servern, så ett nytt pass syns direkt på den andra enheten.",
     },
-    { q: "Finns det en matlogg?", a: "Den byggs härnäst: kalorier och makron, sökning och streckkodsskanning." },
+    {
+      q: "Hur räknas mitt kalorimål ut?",
+      a: "Av längd, vikt, ålder, kön, aktivitetsnivå och vilken veckotakt du vill ha för vikten, med Mifflin–St Jeor. Du ser siffrorna under **Mat → Mål** och kan skriva in egna i stället.",
+    },
+    {
+      q: "Varför stämmer kalorierna inte exakt?",
+      a: "Näringsdata och portioner varierar, och appen vet inte exakt vad du åt. Räkna med flera tiotals procents osäkerhet på en enskild dag. Trenden över veckor säger mer.",
+    },
+    { q: "Det livsmedel jag äter finns inte", a: "Skapa ett eget livsmedel under **+ Lägg till → Skapa eget livsmedel**, eller använd **Snabblogga kalorier**." },
   ],
   comingTitle: "På väg",
   coming: [
-    "Matlogg med kalorier, makron och streckkodsskanning",
+    "Streckkodsskanning för mat",
+    "Måltidsmallar",
     "Påminnelse när det kan vara dags att höja vikten",
     "Ungefärlig kaloribalans och steg",
     "Offline-läge",
@@ -389,6 +432,40 @@ const en: HelpContent = {
       ],
     },
     {
+      id: "food",
+      title: "Food and calories",
+      summary: "Log food, goals, water and weight",
+      blocks: [
+        {
+          t: "steps",
+          items: [
+            "Tap **Food** on the home page and then **+ Add** next to the meal.",
+            "Search for a food (in Swedish or English), or pick from **Recently used** and **Favorites** (the star).",
+            "Choose an amount in **grams** or **servings**. Calories and macros are calculated as you type.",
+            "Tap **Add**. You land back on the day.",
+          ],
+        },
+        {
+          t: "list",
+          items: [
+            "**Can't find it?** Create **your own food** (values per 100 g; only you can see it) or use **Quick add calories**, for example for a lunch out.",
+            "**Edit or remove:** tap a logged entry. If you change the amount, calories and macros scale with it.",
+            "**Browse:** the arrows ‹ › change the day. **The week** shows calories against your goal, protein, workouts and weight per day.",
+            "**Water:** the +250 and +500 ml buttons. **Weight:** enter today's weight; the app shows a seven-day average, since single weigh-ins fluctuate.",
+          ],
+        },
+        {
+          t: "p",
+          text: "**Goals:** Food → Goals (or Settings). Choose to have them calculated from height, weight, age, sex and activity level, or enter your own. The calculation uses Mifflin–St Jeor and your weekly weight rate (1 kg of body fat ≈ 7,700 kcal). Protein is set to 1.8 g per kilo, fat to 25 % of energy (at least 0.6 g per kilo) and the rest becomes carbs. The goal never goes below 1,200 kcal, and it's recalculated straight away when you log a new weight.",
+        },
+        {
+          t: "tip",
+          text: "All numbers are approximate. Nutrition data and portions vary, and the app can't know exactly what you ate. Use the goal as a direction and look at the weekly trend rather than a single day. If you have a medical condition, are pregnant or have extreme goals: ask a healthcare professional.",
+        },
+      ],
+      cta: { href: "/food", label: "Open the food log" },
+    },
+    {
       id: "appearance",
       title: "Language and theme",
       summary: "Swedish/English and dark/light",
@@ -429,7 +506,7 @@ const en: HelpContent = {
       blocks: [
         {
           t: "p",
-          text: "Kraft runs on a private server at home, not at a cloud company. What's stored is your username, a hashed password (never in plain text), your programs, workouts and sets, and settings such as language, theme and time zone. There are no ads and no tracking. Other users can't see your training. The administrator runs the server and can technically access the database.",
+          text: "Kraft runs on a private server at home, not at a cloud company. What's stored is your username, a hashed password (never in plain text), your programs, workouts and sets, logged food, weight and water, and settings such as language, theme, goals and time zone. There are no ads and no tracking. Other users can't see your training. The administrator runs the server and can technically access the database.",
         },
         { t: "p", text: "Want out? Ask an admin to delete your account. Everything that belongs to it is deleted." },
       ],
@@ -462,11 +539,20 @@ const en: HelpContent = {
       q: "Can I use the app on several devices?",
       a: "Yes. Log in with the same account. Everything is on the server, so a new workout shows up on the other device straight away.",
     },
-    { q: "Is there a food log?", a: "It's built next: calories and macros, search and barcode scanning." },
+    {
+      q: "How is my calorie goal calculated?",
+      a: "From height, weight, age, sex, activity level and the weekly weight rate you choose, using Mifflin–St Jeor. You can see the numbers under **Food → Goals** and enter your own instead.",
+    },
+    {
+      q: "Why aren't the calories exact?",
+      a: "Nutrition data and portions vary, and the app doesn't know exactly what you ate. Expect several tens of percent of uncertainty on a single day. The trend over weeks says more.",
+    },
+    { q: "The food I eat isn't in the list", a: "Create your own food under **+ Add → Create your own food**, or use **Quick add calories**." },
   ],
   comingTitle: "Coming up",
   coming: [
-    "Food log with calories, macros and barcode scanning",
+    "Barcode scanning for food",
+    "Meal templates",
     "A reminder when it may be time to increase the weight",
     "Approximate calorie balance and steps",
     "Offline mode",
