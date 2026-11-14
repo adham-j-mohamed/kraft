@@ -36,6 +36,26 @@ export function TopBar({
   useEffect(() => setCount(pending), [pending]);
   useEffect(() => setCurrent(theme), [theme]);
 
+  // Register service worker for PWA and offline queue (client-side only).
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        // If the service worker is active, ask it to flush when we come online.
+        function onOnline() {
+          if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('flush');
+        }
+        window.addEventListener('online', onOnline);
+        // Try an immediate flush when registered
+        if (reg.active) reg.active.postMessage('flush');
+        return () => window.removeEventListener('online', onOnline);
+      })
+      .catch(() => {
+        /* ignore registration failure (dev, http, etc.) */
+      });
+  }, []);
+
   // Klockan uppdateras när fliken blir synlig och därefter var 45:e sekund.
   useEffect(() => {
     if (!isAdmin) return;
