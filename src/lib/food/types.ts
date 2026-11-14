@@ -23,6 +23,8 @@ export interface FoodDTO {
   salt100g: number | null;
   servingGrams: number | null;
   servingLabel: string | null;
+  /** seed | off | manual. Open Food Facts-data märks med källa i gränssnittet (ODbL). */
+  source: string;
   /** true = eget livsmedel för kontot, false = delat bibliotek. */
   own: boolean;
   favorite: boolean;

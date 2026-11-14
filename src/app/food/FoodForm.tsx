@@ -13,12 +13,20 @@ const num = (s: string): number | null => {
 };
 
 /** Eget livsmedel: skapa eller ändra. Värden per 100 g. Ändringar rör inte redan loggade poster. */
-export function FoodForm({ food, back }: { food?: FoodDTO; back: string }) {
+export function FoodForm({
+  food,
+  back,
+  prefill,
+}: {
+  food?: FoodDTO;
+  back: string;
+  prefill?: { barcode?: string | null; name?: string | null };
+}) {
   const { t, fmt } = useI18n();
   const router = useRouter();
   const f = (n: number | null | undefined) => (n == null ? "" : fmt.num(n));
   const [v, setV] = useState({
-    name: food?.name ?? "",
+    name: food?.name ?? prefill?.name ?? "",
     brand: food?.brand ?? "",
     kcal: f(food?.kcal100g),
     protein: f(food?.protein100g),
@@ -47,7 +55,7 @@ export function FoodForm({ food, back }: { food?: FoodDTO; back: string }) {
         body: JSON.stringify({
           name: v.name.trim(),
           brand: v.brand.trim() || null,
-          barcode: food?.barcode ?? null,
+          barcode: food?.barcode ?? prefill?.barcode ?? null,
           kcal100g: kcal,
           protein100g: protein,
           carbs100g: carbs,
@@ -56,7 +64,7 @@ export function FoodForm({ food, back }: { food?: FoodDTO; back: string }) {
           servingLabel: v.servingLabel.trim() || null,
         }),
       });
-      if (!res.ok) return setError(t("foodform.err.save"));
+      if (!res.ok) return setError(res.status === 409 ? t("foodform.err.barcode") : t("foodform.err.save"));
       router.push(back);
       router.refresh();
     } catch {
@@ -96,6 +104,9 @@ export function FoodForm({ food, back }: { food?: FoodDTO; back: string }) {
   return (
     <div className="card flex flex-col gap-4">
       <p className="muted text-xs">{t("foodform.private")}</p>
+      {(food?.barcode ?? prefill?.barcode) ? (
+        <p className="text-sm tabular-nums">{t("foodform.barcode", { code: (food?.barcode ?? prefill?.barcode) as string })}</p>
+      ) : null}
       {field("name", t("foodform.name"), "text")}
       {field("brand", t("foodform.brand"), "text")}
       <p className="muted text-xs uppercase tracking-wide">{t("foodform.per100")}</p>

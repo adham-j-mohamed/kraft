@@ -187,6 +187,8 @@ const sv: HelpContent = {
           t: "list",
           items: [
             "**Hittar du inte maten?** Skapa ett **eget livsmedel** (värden per 100 g; det syns bara för dig) eller använd **Snabblogga kalorier**, till exempel för en lunch ute.",
+            "**Streckkod:** tryck **Skanna streckkod** och rikta kameran mot koden. Produkten slås upp hos Open Food Facts, en öppen databas där vem som helst kan lägga in data, så kontrollera värdena. Hittad produkt sparas så nästa skanning går fort. Fungerar inte kameran kan du skriva in siffrorna under streckkoden.",
+            "**Saknas produkten eller är värdena fel?** Skapa ett eget livsmedel med samma streckkod. Ditt eget går alltid före databasens.",
             "**Ändra eller ta bort:** tryck på en loggad post. Ändrar du mängden skalas kalorier och makron med.",
             "**Bläddra:** pilarna ‹ › byter dag. **Veckan** visar kalorier mot mål, protein, träningspass och vikt per dag.",
             "**Vatten:** knapparna +250 och +500 ml. **Vikt:** skriv in dagens vikt; appen visar sjudagarssnitt, eftersom enstaka vägningar svänger.",
@@ -244,7 +246,7 @@ const sv: HelpContent = {
       blocks: [
         {
           t: "p",
-          text: "Kraft körs på en egen server hemma, inte hos ett molnbolag. Det som sparas är användarnamn, ett hashat lösenord (aldrig i klartext), dina program, pass och set, loggad mat, vikt och vatten, samt inställningar som språk, tema, mål och tidszon. Det finns ingen reklam och ingen spårning. Andra användare kan inte se din träning. Administratören driver servern och kan tekniskt komma åt databasen.",
+          text: "Kraft körs på en egen server hemma, inte hos ett molnbolag. Det som sparas är användarnamn, ett hashat lösenord (aldrig i klartext), dina program, pass och set, loggad mat, vikt och vatten, samt inställningar som språk, tema, mål och tidszon. Det finns ingen reklam och ingen spårning. Skannar du en streckkod skickas bara själva koden från servern till Open Food Facts, inte vem du är. Andra användare kan inte se din träning. Administratören driver servern och kan tekniskt komma åt databasen.",
         },
         { t: "p", text: "Vill du bort? Be en admin ta bort ditt konto. Då raderas allt som hör till det." },
       ],
@@ -285,11 +287,14 @@ const sv: HelpContent = {
       q: "Varför stämmer kalorierna inte exakt?",
       a: "Näringsdata och portioner varierar, och appen vet inte exakt vad du åt. Räkna med flera tiotals procents osäkerhet på en enskild dag. Trenden över veckor säger mer.",
     },
+    {
+      q: "Kameran startar inte när jag skannar",
+      a: "Kraft behöver tillåtelse att använda kameran: på iPhone under **Inställningar → Safari → Kamera** (eller Kraft, om appen ligger på hemskärmen). Kameran kräver också en säker anslutning (https) och en aktuell iOS-version. Du kan alltid skriva in siffrorna under streckkoden i stället.",
+    },
     { q: "Det livsmedel jag äter finns inte", a: "Skapa ett eget livsmedel under **+ Lägg till → Skapa eget livsmedel**, eller använd **Snabblogga kalorier**." },
   ],
   comingTitle: "På väg",
   coming: [
-    "Streckkodsskanning för mat",
     "Måltidsmallar",
     "Påminnelse när det kan vara dags att höja vikten",
     "Ungefärlig kaloribalans och steg",
@@ -449,6 +454,8 @@ const en: HelpContent = {
           t: "list",
           items: [
             "**Can't find it?** Create **your own food** (values per 100 g; only you can see it) or use **Quick add calories**, for example for a lunch out.",
+            "**Barcode:** tap **Scan barcode** and point the camera at the code. The product is looked up at Open Food Facts, an open database anyone can add data to, so check the values. A product that is found is saved so the next scan is quick. If the camera doesn't work you can type the digits under the barcode.",
+            "**Product missing or values wrong?** Create your own food with the same barcode. Yours always takes priority over the database.",
             "**Edit or remove:** tap a logged entry. If you change the amount, calories and macros scale with it.",
             "**Browse:** the arrows ‹ › change the day. **The week** shows calories against your goal, protein, workouts and weight per day.",
             "**Water:** the +250 and +500 ml buttons. **Weight:** enter today's weight; the app shows a seven-day average, since single weigh-ins fluctuate.",
@@ -506,7 +513,7 @@ const en: HelpContent = {
       blocks: [
         {
           t: "p",
-          text: "Kraft runs on a private server at home, not at a cloud company. What's stored is your username, a hashed password (never in plain text), your programs, workouts and sets, logged food, weight and water, and settings such as language, theme, goals and time zone. There are no ads and no tracking. Other users can't see your training. The administrator runs the server and can technically access the database.",
+          text: "Kraft runs on a private server at home, not at a cloud company. What's stored is your username, a hashed password (never in plain text), your programs, workouts and sets, logged food, weight and water, and settings such as language, theme, goals and time zone. There are no ads and no tracking. If you scan a barcode, only the code itself is sent from the server to Open Food Facts, not who you are. Other users can't see your training. The administrator runs the server and can technically access the database.",
         },
         { t: "p", text: "Want out? Ask an admin to delete your account. Everything that belongs to it is deleted." },
       ],
@@ -547,11 +554,14 @@ const en: HelpContent = {
       q: "Why aren't the calories exact?",
       a: "Nutrition data and portions vary, and the app doesn't know exactly what you ate. Expect several tens of percent of uncertainty on a single day. The trend over weeks says more.",
     },
+    {
+      q: "The camera doesn't start when I scan",
+      a: "Kraft needs permission to use the camera: on iPhone under **Settings → Safari → Camera** (or Kraft, if the app is on your home screen). The camera also needs a secure connection (https) and a current iOS version. You can always type the digits under the barcode instead.",
+    },
     { q: "The food I eat isn't in the list", a: "Create your own food under **+ Add → Create your own food**, or use **Quick add calories**." },
   ],
   comingTitle: "Coming up",
   coming: [
-    "Barcode scanning for food",
     "Meal templates",
     "A reminder when it may be time to increase the weight",
     "Approximate calorie balance and steps",

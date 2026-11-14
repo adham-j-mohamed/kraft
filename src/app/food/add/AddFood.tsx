@@ -7,6 +7,7 @@ import { MEALS, type FoodDTO, type Meal } from "@/lib/food/types";
 import { useI18n } from "@/lib/i18n/client";
 import { foodLabel, servingLabelText } from "@/lib/i18n/foods";
 import { scalePer100g } from "@/lib/nutrition";
+import { BarcodeScanner } from "./BarcodeScanner";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 type Tab = "recent" | "favorites";
@@ -27,6 +28,14 @@ export function AddFood({ meal: initialMeal, date }: { meal: Meal; date: string 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingId = useRef<string | null>(null);
+
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
+  type Lookup =
+    | { state: "idle" }
+    | { state: "busy"; code: string }
+    | { state: "notFound" | "noNutrition" | "failed" | "rate"; code: string; name?: string | null };
+  const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
 
   const [quickOpen, setQuickOpen] = useState(false);
   const [quick, setQuick] = useState({ name: "", kcal: "", protein: "", carbs: "", fat: "" });
@@ -68,8 +77,9 @@ export function AddFood({ meal: initialMeal, date }: { meal: Meal; date: string 
     };
   }, [q]);
 
-  function pick(food: FoodDTO) {
+  function pick(food: FoodDTO, note: string | null = null) {
     pendingId.current = null;
+    setScanNote(note);
     setError(null);
     setSelected(food);
     if (food.servingGrams) {
@@ -94,6 +104,30 @@ export function AddFood({ meal: initialMeal, date }: { meal: Meal; date: string 
           grams,
         )
       : null;
+
+  /** Streckkod → livsmedel. Hittas det öppnas portionsvalet; annars förklaras varför och vad man kan göra. */
+  async function lookupCode(code: string) {
+    setLookup({ state: "busy", code });
+    try {
+      const res = await fetch(`/api/foods/barcode/${code}`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setLookup({ state: "idle" });
+        setScanOpen(false);
+        pick(data.food as FoodDTO, t("scan.fromCode", { code }));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      setScanOpen(false);
+      if (res.status === 404 && data.error === "no_nutrition") return setLookup({ state: "noNutrition", code, name: data.name ?? null });
+      if (res.status === 404) return setLookup({ state: "notFound", code });
+      if (res.status === 429) return setLookup({ state: "rate", code });
+      setLookup({ state: "failed", code });
+    } catch {
+      setScanOpen(false);
+      setLookup({ state: "failed", code });
+    }
+  }
 
   async function toggleFavorite(food: FoodDTO) {
     const on = !food.favorite;
@@ -186,6 +220,57 @@ export function AddFood({ meal: initialMeal, date }: { meal: Meal; date: string 
         ))}
       </div>
 
+      {scanOpen ? (
+        <BarcodeScanner onCode={lookupCode} onClose={() => setScanOpen(false)} busy={lookup.state === "busy"} />
+      ) : (
+        <button
+          type="button"
+          className="btn btn-primary w-full gap-3"
+          onClick={() => {
+            setLookup({ state: "idle" });
+            setScanOpen(true);
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M11 8v8M15 8v8M18 8v8" />
+          </svg>
+          {t("scan.button")}
+        </button>
+      )}
+
+      {lookup.state === "busy" ? (
+        <p className="muted text-sm" role="status">
+          {t("scan.looking", { code: lookup.code })}
+        </p>
+      ) : lookup.state !== "idle" ? (
+        <section className="card border-danger/40 flex flex-col gap-3" role="alert">
+          <p className="text-sm">
+            {lookup.state === "notFound"
+              ? t("scan.notFound", { code: lookup.code })
+              : lookup.state === "noNutrition"
+                ? t("scan.noNutrition", { name: lookup.name || lookup.code })
+                : lookup.state === "rate"
+                  ? t("scan.rate")
+                  : t("scan.lookupFailed")}
+          </p>
+          {lookup.state === "notFound" || lookup.state === "noNutrition" ? (
+            <Link
+              className="btn btn-primary w-full"
+              href={`/food/new?${query}&barcode=${lookup.code}${lookup.state === "noNutrition" && lookup.name ? `&name=${encodeURIComponent(lookup.name)}` : ""}`}
+            >
+              {t("scan.createWith")}
+            </Link>
+          ) : (
+            <button type="button" className="btn btn-primary w-full" onClick={() => lookupCode(lookup.code)}>
+              {t("scan.retry")}
+            </button>
+          )}
+          <button type="button" className="btn w-full" onClick={() => { setLookup({ state: "idle" }); setScanOpen(true); }}>
+            {t("scan.again")}
+          </button>
+        </section>
+      ) : null}
+
       <input
         className="input"
         type="search"
@@ -205,6 +290,8 @@ export function AddFood({ meal: initialMeal, date }: { meal: Meal; date: string 
                 {selected.brand ? `${selected.brand} · ` : ""}
                 {t("add.per100", { kcal: fmt.num(selected.kcal100g, 0) })}
               </p>
+              {scanNote ? <p className="text-accent text-xs font-medium">{scanNote}</p> : null}
+              {selected.source === "off" ? <p className="muted text-[11px]">{t("scan.source.off")}</p> : null}
             </div>
             <button type="button" className="btn h-9 min-h-0 px-3 text-xs" onClick={() => setSelected(null)}>
               {t("portion.close")}

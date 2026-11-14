@@ -7,7 +7,7 @@ import { FoodForm } from "../FoodForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewFoodPage({ searchParams }: { searchParams: Promise<{ meal?: string; d?: string }> }) {
+export default async function NewFoodPage({ searchParams }: { searchParams: Promise<{ meal?: string; d?: string; barcode?: string; name?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/food");
   const { t } = await getI18n();
@@ -22,7 +22,10 @@ export default async function NewFoodPage({ searchParams }: { searchParams: Prom
           {t("common.back")}
         </Link>
       </header>
-      <FoodForm back={back} />
+      <FoodForm
+        back={back}
+        prefill={{ barcode: /^\d{8,14}$/.test(p.barcode ?? "") ? p.barcode : null, name: p.name?.slice(0, 100) ?? null }}
+      />
     </main>
   );
 }

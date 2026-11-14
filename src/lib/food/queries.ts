@@ -32,6 +32,7 @@ function toFood(row: typeof foods.$inferSelect, favorite = false): FoodDTO {
     salt100g: num(row.salt100g),
     servingGrams: num(row.servingGrams),
     servingLabel: row.servingLabel,
+    source: row.source,
     own: row.userId !== null,
     favorite,
   };
@@ -106,6 +107,36 @@ export async function getFood(userId: string, id: string): Promise<FoodDTO | nul
     .limit(1);
   if (!row) return null;
   return toFood(row, (await favoriteIds(userId)).has(row.id));
+}
+
+/**
+ * Streckkod i vår egen databas. Egna livsmedel går före delade, så en användares egen
+ * rättning av en produkt vinner över det som hämtats från Open Food Facts.
+ */
+export async function findByBarcode(userId: string, codes: string[]): Promise<FoodDTO | null> {
+  const [row] = await getDb()
+    .select()
+    .from(foods)
+    .where(and(inArray(foods.barcode, codes), visibleTo(userId)))
+    .orderBy(sql`(case when ${foods.userId} is null then 1 else 0 end)`)
+    .limit(1);
+  if (!row) return null;
+  return toFood(row, (await favoriteIds(userId)).has(row.id));
+}
+
+/** Sparar en produkt från Open Food Facts som delat livsmedel (publik data) så nästa skanning är lokal. */
+export async function cacheOffFood(input: FoodInput): Promise<FoodDTO | null> {
+  const db = getDb();
+  await db
+    .insert(foods)
+    .values({ ...foodValues(input), userId: null, source: "off" })
+    .onConflictDoNothing();
+  const [row] = await db
+    .select()
+    .from(foods)
+    .where(and(eq(foods.barcode, input.barcode ?? ""), isNull(foods.userId)))
+    .limit(1);
+  return row ? toFood(row) : null;
 }
 
 export async function setFavorite(userId: string, foodId: string, on: boolean): Promise<boolean> {
