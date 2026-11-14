@@ -36,9 +36,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   ]);
   const isAdmin = user?.role === "admin";
   const pending = isAdmin ? await countPending().catch(() => 0) : 0;
+  const theme = user?.settings?.theme ?? "system";
 
   return (
-    <html lang={locale}>
+    <html lang={locale} data-theme={theme}>
       <body>
         <I18nProvider locale={locale}>
           <TopBar explicit={explicit} isAdmin={isAdmin} pending={pending} />

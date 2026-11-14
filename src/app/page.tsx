@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { todayInZone } from "@/lib/dates";
 import { getI18n } from "@/lib/i18n/server";
 import { getActiveProgram, getActiveSession, nextWorkoutOf } from "@/lib/training/queries";
+import { getDb } from "@/lib/db";
+import { sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,10 @@ export default async function DashboardPage() {
     user.role === "admin" ? countPending() : Promise.resolve(0),
   ]);
   const next = program ? nextWorkoutOf(program) : null;
+
+  // Server time for the status card when shown
+  const status = await getDb().execute(sql`select now()::text as now`);
+  const showStatus = user.role === "admin" || user.username === "addejj" || user.username === "agent";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-10 pt-6">
@@ -91,6 +97,20 @@ export default async function DashboardPage() {
         <p className="muted text-xs uppercase tracking-wide">{t("dash.food")}</p>
         <p className="muted text-sm">{t("dash.foodSoon")}</p>
       </section>
+
+      {showStatus ? (
+        <section className="card text-sm">
+          <p className="muted text-xs uppercase tracking-wide">Status</p>
+          <ul className="mt-2 space-y-1">
+            <li>Databas: ansluten ({String(status.rows[0]?.now ?? "").slice(0, 16)})</li>
+            <li>
+              Inloggning: {user.username} ({user.role === "admin" ? "admin" : "medlem"})
+            </li>
+            <li>Mat: dagbok och streckkod byggs efter träningen</li>
+          </ul>
+        </section>
+      ) : null}
+
     </main>
   );
 }
