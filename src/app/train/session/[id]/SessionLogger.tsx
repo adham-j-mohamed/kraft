@@ -488,21 +488,13 @@ function ExerciseCard({
       </div>
 
       {ex.previous ? (
-        <div className="rounded-xl bg-surface-2 px-3 py-2 text-sm">
-          <p className="muted text-xs">{t("sess.prev", { date: ex.previous.dateLabel })}</p>
-          <p className="tabular-nums">{ex.previous.sets.map((s) => fmt.set(s, ex.tracking)).join("  ·  ")}</p>
-          {ex.previous.best && ex.tracking === "weight_reps" && ex.previous.best.e1rm ? (
-            <p className="muted text-xs">
-              {t("sess.best", { set: fmt.set(ex.previous.best, ex.tracking), e1rm: fmt.num(ex.previous.best.e1rm, 1) })}
-            </p>
-          ) : null}
-          {hintText ? (
-            <p className={`mt-1 text-xs ${hint?.kind === "up" ? "text-accent font-semibold" : "muted"}`}>{hintText}</p>
-          ) : null}
-        </div>
+        <PrevBox previous={ex.previous} tracking={ex.tracking} hintText={hintText} fmt={fmt} t={t} />
       ) : !readOnly && hintText ? (
         <p className="muted text-xs">{hintText}</p>
       ) : null}
+
+      
+
 
       {ex.sets.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
@@ -703,5 +695,39 @@ function TextInput({ label, value, onChange }: { label: string; value: string; o
         onChange={(e) => onChange(e.target.value.replace(/[^\d:]/g, ""))}
       />
     </label>
+  );
+}
+
+function PrevBox({ previous, tracking, hintText, fmt, t }: { previous: { sets: SetDTO[]; dateLabel: string; best?: any }; tracking: any; hintText: string | null; fmt: any; t: any }) {
+  const [open, setOpen] = useState(false);
+  const compact = previous.sets.map((s) => fmt.set(s, tracking)).join("  ·  ");
+  return (
+    <div className="rounded-xl bg-surface-2 px-3 py-2 text-sm">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="muted text-xs">{t("sess.prev", { date: previous.dateLabel })}</p>
+          <p className="tabular-nums">{compact}</p>
+          {previous.best && tracking === "weight_reps" && previous.best.e1rm ? (
+            <p className="muted text-xs">
+              {t("sess.best", { set: fmt.set(previous.best, tracking), e1rm: fmt.num(previous.best.e1rm, 1) })}
+            </p>
+          ) : null}
+          {hintText ? <p className={`mt-1 text-xs muted`}>{hintText}</p> : null}
+        </div>
+        <button type="button" className="btn px-3" onClick={() => setOpen((s) => !s)}>
+          {open ? t("common.hide") : t("common.showMore")}
+        </button>
+      </div>
+      {open ? (
+        <div className="mt-2 text-sm">
+          {previous.sets.map((s) => (
+            <div key={s.clientId ?? s.id} className="flex items-center justify-between">
+              <div className="tabular-nums">{fmt.set(s, tracking)}</div>
+              <div className="muted text-xs">{s.completedAt}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
