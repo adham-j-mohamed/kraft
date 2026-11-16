@@ -78,6 +78,8 @@ registrations wait for an admin to approve them under Admin → Users.
 Everything runs in Docker on one host: `db`, `app`, and a one-off `tools` image
 for migrations and seeding.
 
+Legacy (rsync) deploy:
+
 ```bash
 ./scripts/deploy.sh                                  # rsync to the server
 ssh aj-lab 'cd ~/kraft && docker compose up -d db'
@@ -85,6 +87,29 @@ ssh aj-lab 'cd ~/kraft && docker compose run --rm tools'
 ssh aj-lab 'cd ~/kraft && docker compose run --rm --entrypoint node tools scripts/seed.mjs'
 ssh aj-lab 'cd ~/kraft && docker compose up -d --build app'
 ```
+
+Recommended (image‑based) deploy — server pulls image and restarts locally:
+
+1. CI builds and publishes Docker image to a registry (example: GitHub Container Registry)
+   as `ghcr.io/<owner>/kraft:sha` and `ghcr.io/<owner>/kraft:latest`.
+
+2. On the server, run compose with the production override which uses the image:
+
+```bash
+# Start production stack; set APP_IMAGE to pin a tag if desired
+APP_IMAGE=ghcr.io/<owner>/kraft:latest docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+3. For automatic redeploy on new image, run Watchtower on the host. Example (public images):
+
+```bash
+docker run -d --name watchtower \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  containrrr/watchtower --cleanup --label-enable
+```
+
+If images are private (GHCR default), `docker login ghcr.io` on the server is required so
+Watchtower (or the docker daemon) can pull new images.
 
 The public hostname is served through an existing Cloudflare tunnel; the app
 itself only needs a hostname rule pointing at `http://<host>:3310`.
