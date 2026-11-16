@@ -7,6 +7,7 @@
 ### Fixed
 
 ### Changed
+- docs: generate CHANGELOG.md (v0.1.0)
 - ci: build & publish image workflow; add docker-compose.prod.yml and docs for image-based auto-deploy
 - chore: uppdatera .claude skills för detta repo (Node/Next.js, package.json, Diataxis docs)
 - ci(cd): add GitHub Actions CI build and deploy workflows (rsync -> aj-lab, migrate/seed, healthcheck)
