@@ -1,13 +1,42 @@
+# Node and build artifacts
 node_modules/
 .next/
 out/
-drizzle/meta/_journal.json.bak
+
+# Environment and secrets
 .env
 .env.*
 !.env.example
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
 .DS_Store
+
+# Tests / coverage
 coverage/
+
+# TypeScript build cache
 tsconfig.tsbuildinfo
 next-env.d.ts
+
+# Local data
 data/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Hermes agent state and plans (should not be tracked)
+.hermes/
+
+# Optional: local databases, backups
+*.sqlite
+*.db
+backup/
+
+# Keep .claude and .github in repo (do not ignore)
