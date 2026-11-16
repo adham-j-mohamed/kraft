@@ -1,37 +1,37 @@
 ---
 name: conventional-commits
-description: Enforce Conventional Commits for git messages. Output is designed to feed directly into the changelog-writer skill.
+description: "Verifikation och vägledning för Conventional Commits-formatet i detta repo. Output kan användas av changelog-writer."
 license: MIT
 compatibility: opencode
 metadata:
-  audience: maintainers
+  audience: contributors
   workflow: git
 ---
 
-## What I do
+# Conventional Commits (för Kraft)
 
-- Enforce Conventional Commits format for git commit messages
-- Validate allowed types and subject style
-- Call out breaking change notation when applicable
+Syfte: se till att commit‑meddelanden följer konventionen så de kan mappas till changelog‑sektioner
+och version‑bump‑regler.
 
-## When to use me
-
-Use this when crafting or reviewing git commit messages.
-Ask clarifying questions if the correct type or scope is unclear.
-
-## Guidelines
-
+Regler
 - Format: `<type>[optional scope][!]: <description>`
-- `type` must be one of: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- `scope` is optional and should be a short, lowercase noun (no spaces)
-- `description` is required, lowercase, no trailing period
-- Keep the subject concise and focused on the change intent
-- Use `!` for breaking changes only when applicable
-- For breaking changes with additional detail, add a `BREAKING CHANGE:` footer after a blank line
+- Tillåtna typer: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- Scope är valfritt och ska vara ett kort, gemenerat ord (inga mellanslag)
+- Beskrivning: kort, låg bokstav, ingen avslutande punkt
+- Använd `!` endast för verkliga breaking changes
+- För breaking changes med detaljer, lägg till en `BREAKING CHANGE:`-sektion i meddelandets body
 
-## Examples
+Exempel
+- `feat(sessions): add pending placeholder for queued sets`
+- `fix(api): return 202 for queued writes`
+- `docs: update offline behaviour in help`
+- `perf: reduce re-renders in TopBar`
+- `feat(session)!: change session id format (breaking)`
 
-- `feat(serials): add base-30 allocator`
-- `fix(csv): clamp export count`
-- `docs: document sgtin-198 format`
-- `feat(auth)!: remove legacy token endpoint`
+När du ska fråga
+- Om commitens typ eller scope är osäker, fråga innan du kategoriserar.
+- Om commit innehåller mycket olika ändringar, dela upp i flera commits med tydliga typer.
+
+Användning i pipelines
+- Denna skill kan parsas programatiskt i CI för att generera changelog‑utkast och
+  bestämma version‑bump. Commits som inte matchar formatet ska flaggas för manuell review.
