@@ -38,6 +38,56 @@ export function SessionLogger({ initial }: { initial: SessionDTO }) {
   const audio = useRef<AudioContext | null>(null);
   const beeped = useRef(false);
 
+  // Offline/sync state from service worker
+  const [queuedCount, setQueuedCount] = useState<number>(0);
+  const [syncing, setSyncing] = useState<boolean>(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    function onMessage(ev: MessageEvent) {
+      const data = ev.data || {};
+      switch (data.type) {
+        case 'queue':
+          setQueuedCount(typeof data.queued === 'number' ? data.queued : 0);
+          if (data.queued === 0) {
+            setSyncing(false);
+            setSyncMessage('');
+          }
+          break;
+        case 'sync-start':
+          setSyncing(true);
+          setSyncMessage(`Synkar… ${data.queued ?? ''}`);
+          break;
+        case 'sync-item':
+          setSyncMessage(`Synkar ${data.url ?? ''}`);
+          break;
+        case 'sync-success':
+          setSyncMessage('Synkat');
+          break;
+        case 'sync-failed':
+          setSyncMessage(`Misslyckades: ${data.status ?? ''}`);
+          break;
+        case 'sync-giveup':
+          setSyncMessage('Avbröt synk (för många försök)');
+          break;
+        case 'sync-network-error':
+          setSyncMessage('Nätverket saknas — väntar');
+          setSyncing(false);
+          break;
+        case 'sync-done':
+          setQueuedCount(data.queued ?? 0);
+          setSyncing(false);
+          setSyncMessage(data.queued ? `Kvar: ${data.queued}` : 'Synkat');
+          break;
+        default:
+          break;
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, []);
+
   // Håll skärmen tänd under passet (stöds i Safari från iOS 16.4; fel ignoreras).
   useEffect(() => {
     if (readOnly || !("wakeLock" in navigator)) return;
@@ -442,9 +492,47 @@ function ExerciseCard({
         body: JSON.stringify({ sessionExerciseId: ex.id, clientId, ...parsed.fields }),
       });
       const data = await res.json().catch(() => ({}));
+
+      // 202 queued: service worker accepted the write and queued it locally
+      if (res.status === 202 || data?.queued) {
+        // show a local placeholder set (dedupe by clientId)
+        const placeholder: any = {
+          id: `pending-${clientId}`,
+          clientId,
+          setNumber: nextNumber,
+          weightKg: (parsed.fields as any).weightKg ?? null,
+          reps: (parsed.fields as any).reps ?? null,
+          durationSec: (parsed.fields as any).durationSec ?? null,
+          distanceM: (parsed.fields as any).distanceM ?? null,
+          rpe: (parsed.fields as any).rpe ?? null,
+          setType: (parsed.fields as any).setType ?? "normal",
+          completedAt: new Date().toISOString(),
+          pending: true,
+        };
+        onSets(ex.id, (sets) => {
+          if (sets.some((s) => s.clientId === clientId || s.id === placeholder.id)) return sets;
+          return [...sets, placeholder];
+        });
+        // keep pendingId so a manual retry (if user pressed again) reuses same clientId
+        setInputs((i) => ({ ...i, rpe: "", setType: "normal" }));
+        if (supersetNext) onRest(0, "");
+        else if (parsed.fields.setType !== "warmup") onRest(ex.restSeconds, name);
+        return;
+      }
+
       if (!res.ok) return setError(errorText(t, data.error));
+
+      // Success: integrate server-set and replace any placeholder with same clientId
       pendingId.current = null;
-      onSets(ex.id, (sets) => (sets.some((s) => s.id === data.set.id) ? sets : [...sets, data.set]));
+      const serverSet = data.set;
+      onSets(ex.id, (sets) => {
+        // if server returned clientId, replace placeholder
+        if (serverSet?.clientId) {
+          if (sets.some((s) => s.id === serverSet.id)) return sets;
+          return sets.map((s) => (s.clientId === serverSet.clientId ? serverSet : s)).concat(sets.every((s) => s.id !== serverSet.id && s.clientId !== serverSet.clientId) ? [serverSet] : []);
+        }
+        return sets.some((s) => s.id === serverSet.id) ? sets : [...sets, serverSet];
+      });
       setInputs((i) => ({ ...i, rpe: "", setType: "normal" }));
       // Superset: vila först efter sista övningen i gruppen.
       if (supersetNext) onRest(0, "");
