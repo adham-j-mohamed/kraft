@@ -33,6 +33,11 @@ export function TopBar({
   const [count, setCount] = useState(pending);
   const [current, setCurrent] = useState<Theme>(theme);
 
+  // SW sync state
+  const [queuedCount, setQueuedCount] = useState<number>(0);
+  const [syncing, setSyncing] = useState<boolean>(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
   useEffect(() => setCount(pending), [pending]);
   useEffect(() => setCurrent(theme), [theme]);
 
@@ -54,6 +59,49 @@ export function TopBar({
       .catch(() => {
         /* ignore registration failure (dev, http, etc.) */
       });
+
+    // Listen for SW messages about queue/sync state
+    function onMessage(ev: MessageEvent) {
+      const data = ev.data || {};
+      switch (data.type) {
+        case 'queue':
+          setQueuedCount(typeof data.queued === 'number' ? data.queued : 0);
+          if ((data.queued ?? 0) === 0) {
+            setSyncing(false);
+            setSyncMessage(null);
+          }
+          break;
+        case 'sync-start':
+          setSyncing(true);
+          setSyncMessage(`Synkar… ${data.queued ?? ''}`);
+          break;
+        case 'sync-item':
+          setSyncMessage(`Synkar ${data.url ?? ''}`);
+          break;
+        case 'sync-success':
+          setSyncMessage('Synkat');
+          break;
+        case 'sync-failed':
+          setSyncMessage(`Misslyckades: ${data.status ?? ''}`);
+          break;
+        case 'sync-giveup':
+          setSyncMessage('Avbröt synk (för många försök)');
+          break;
+        case 'sync-network-error':
+          setSyncMessage('Nätverket saknas — väntar');
+          setSyncing(false);
+          break;
+        case 'sync-done':
+          setQueuedCount(data.queued ?? 0);
+          setSyncing(false);
+          setSyncMessage(data.queued ? `Kvar: ${data.queued}` : 'Synkat');
+          break;
+        default:
+          break;
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, []);
 
   // Klockan uppdateras när fliken blir synlig och därefter var 45:e sekund.
@@ -162,6 +210,17 @@ export function TopBar({
             </svg>
           )}
         </button>
+
+        {/* Sync indicator: small pill showing queued/sync state */}
+        {queuedCount > 0 || syncing ? (
+          <div className={`${CHIP} px-3 mr-2 text-sm`} title={syncMessage ?? `${queuedCount} i kö`}> 
+            {syncing ? (
+              <span className="inline-flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 0-3 6.7"/><path d="M21 3v6h-6"/></svg><span>{syncMessage ?? 'Synkar…'}</span></span>
+            ) : (
+              <span className="inline-flex items-center gap-2">{queuedCount} i kö</span>
+            )}
+          </div>
+        ) : null}
 
         <Link href="/help" aria-label={t("top.help")} title={t("top.help")} className={`${CHIP} w-10`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
