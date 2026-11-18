@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kraft — Health Shortcuts</title>
+  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;max-width:900px;margin:3rem auto;padding:1rem}pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}</style>
+</head>
+<body>
+  <h1>Kraft — Shortcuts för HealthKit‑sync (instruktioner)</h1>
+  <p>Här finns en färdig mall och steg‑för‑steg för att automatisera uppladdning av Health‑data till din Kraft‑server via Shortcuts på iPhone. Shortcuts‑appen på iOS kräver att användaren godkänner åtkomst till Health första gången.</p>
+
+  <h2>Snabbstart</h2>
+  <ol>
+    <li>Öppna den här sidan i Safari på iPhone: <strong>https://kraft.jmohamed.se/shortcuts/</strong></li>
+    <li>Tryck "Ladda ner mallen" för att spara den som referens eller öppna den i en annan app (mallen är en JSON‑beskrivning och steg för Shortcuts; Shortcuts kan inte importera .json direkt utan du följer stegen i Shortcuts-appen för att återskapa den).</li>
+    <li>I Shortcuts, skapa en ny genväg enligt avsnittet "Skapa genväg" nedan.</li>
+    <li>Skapa en personlig automation (t.ex. Tid på dagen 22:00 eller När jag ansluter till hem‑Wi‑Fi) och välj att köra genvägen. Välj gärna en trigger som inte kräver bekräftelse på din iOS‑version.</li>
+  </ol>
+
+  <h2>Vad genvägen gör</h2>
+  <ul>
+    <li>Begär och läser senaste prover för vikt (Body Mass), vatten (Dietary Water) och eventuella workouts.</li>
+    <li>Bygger en JSON‑batch med clientId och items.</li>
+    <li>Begär ditt API‑token (kopia/klistra in eller hämta från Keychain i Shortcuts) och POSTar till <code>/api/health/ingest</code> med Authorization: Bearer &lt;token&gt;.</li>
+  </ul>
+
+  <h2>Download / mall</h2>
+  <p><a href="/shortcuts/kraft-health-shortcut.json" download>Ladda ner mallen (JSON)</a> — filen innehåller en detaljerad beskrivning av Shortcuts‑stegen och ett exempel‑payload.</p>
+
+  <h2>Skapa genväg i Shortcuts (steg‑för‑steg)</h2>
+  <ol>
+    <li>Öppna Shortcuts → tryck + → "Add Action".</li>
+    <li>Sök "Get Health Sample" (eller "Hälsa" på svenska) och välj "Get Health Samples" / "Hälsoprov". Konfigurera för <em>Body Mass</em>, sort by Date (Latest first), limit 1. Detta hämtar senaste vikten.</li>
+    <li>Lägg till en annan "Get Health Samples" för <em>Dietary Water</em>, limit 10 (samla dagens vattenintag eller senaste prover).</li>
+    <li>Lägg till "Get Health Samples" för <em>Workout</em> (limit 5 eller som du önskar) för senaste workouts.</li>
+    <li>Lägg till "Text" och bygg en JSON‑mall med följande fält (se exempel nedan). Använd "Dictionary"/"Scripting" för att konstruera fält istället för fri text om du vill.
+      <pre>{
+  "clientId": "shortcuts-{{UUID}}",
+  "source": "shortcuts",
+  "items": [ /* items från prover — typ, value, unit, timestamp */ ]
+}</pre>
+    </li>
+    <li>Lägg till "Ask for Input" (Text) för att be om API‑token — be användaren klistra in sitt token som de genererade i Kraft‑inställningarna.</li>
+    <li>Lägg till "Get Contents of URL" och konfigurera: Method POST, URL: <code>https://kraft.jmohamed.se/api/health/ingest</code>, Request Body: JSON, Header: Authorization: Bearer &lt;token från input&gt; och Content-Type: application/json. Som body använder du JSON‑mallen du byggt.</li>
+    <li>Hantera svar och visa bekräftelse (Visa meddelande/Notify) vid OK, eller spara felet i logg om det misslyckas.</li>
+  </ol>
+
+  <h2>Exempel‑payload</h2>
+  <pre>{
+  "clientId": "shortcuts-20261116-7b8f6c3a",
+  "source": "shortcuts",
+  "items": [
+    {"type":"weight","value":82.3,"unit":"kg","timestamp":"2026-11-16T07:00:00Z"},
+    {"type":"water","value":250,"unit":"ml","timestamp":"2026-11-16T07:10:00Z"},
+    {"type":"workout","workoutType":"running","duration":1800,"calories":300,"timestamp":"2026-11-15T18:00:00Z"}
+  ]
+}</pre>
+
+  <h2>API‑endpoint (server)</h2>
+  <p>Servern behöver en endpoint <code>POST /api/health/ingest</code> som accepterar ovan JSON och en <code>Authorization: Bearer &lt;token&gt;</code>. Jag kan implementera endpointen i Kraft så den tar emot batchen och skapar weight/water/workout‑poster i din databas. Vill du att jag implementerar detta nu?</p>
+
+  <h2>Vanliga problem</h2>
+  <ul>
+    <li>Shortcuts måste få åtkomst till Health första gången — visa instruktioner för användaren.</li>
+    <li>Automations i vissa iOS‑versioner kan kräva bekräftelse beroende på trigger; rekommenderat trigger: "Time of day" och välj "At Night/Eve" som ofta kan köras utan bekräftelse.</li>
+    <li>Om din server kräver session‑cookie inbyggt i appen, rekommenderas ett per‑användar API‑token istället (lättare att använda i Shortcuts).</li>
+  </ul>
+
+  <p>Behöver du att jag även lägger upp en färdig "Import‑fil" (t.ex. en .shortcut) så försöker jag generera en export som användaren kan ladda ner och importera — men vissa iOS‑versioner kräver manuellt bygge i Shortcuts ändå. Jag rekommenderar att vi först implementerar server‑endpointen (<code>/api/health/ingest</code>) och ett enkelt API‑token‑flöde så kan jag färdigställa en mall du kan testa.</p>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "Kraft Health Sync (template)",
+  "description": "Template: build a Shortcuts workflow that reads Health samples (weight, water, workouts) and POSTs to https://kraft.jmohamed.se/api/health/ingest with Authorization header.",
+  "steps": [
+    "Get latest Body Mass (limit 1)",
+    "Get Dietary Water samples (limit 10 or for today)",
+    "Get Workouts (limit 5)",
+    "Build dictionary / JSON with clientId, source: 'shortcuts' and items[]",
+    "Ask for Input (Text) — API token (paste)",
+    "Get Contents of URL — POST https://kraft.jmohamed.se/api/health/ingest, Headers: Authorization: Bearer <token>, Content-Type: application/json, Body: JSON",
+    "Show Result or Notify"
+  ],
+  "examplePayload": {
+    "clientId": "shortcuts-20261116-7b8f6c3a",
+    "source": "shortcuts",
+    "items": [
+      {"type":"weight","value":82.3,"unit":"kg","timestamp":"2026-11-16T07:00:00Z"},
+      {"type":"water","value":250,"unit":"ml","timestamp":"2026-11-16T07:10:00Z"},
+      {"type":"workout","workoutType":"running","duration":1800,"calories":300,"timestamp":"2026-11-15T18:00:00Z"}
+    ]
+  }
+}
