@@ -52,6 +52,8 @@ filen gäller allt arbete i repot.
 | `src/lib/training` | träningsdelen: frågor (`queries.ts`), validering (zod), typer och progressionslogik som även klienten använder |
 | `src/lib/api.ts` | gemensam ingång för JSON-routes: origin-kontroll, session, zod-parsning |
 | `src/app/train` | översikt, programredigerare, passlogger och historik per övning |
+| `src/lib/health`, `src/app/api/health/ingest` | hälsosynk: tolkning av värden och enheter (`units.ts`), skrivning av vikt/vatten (`ingest.ts`), mottagare med Bearer-nyckel. Nyckeln (`src/lib/auth/api-token.ts`) hashas med SHA-256 och är en per konto |
+| `scripts/build-shortcut.mjs` | bygger och signerar genvägen `public/shortcuts/kraft-halsosynk.shortcut` (kräver macOS, `KRAFT_URL`); filen checkas inte in. Se `docs/halsosynk.md` |
 | `scripts/migrate.mjs` | migrationer vid start/engångskörning |
 | `scripts/seed.mjs` | globala övningar och livsmedel, idempotent |
 | `drizzle/` | genererade SQL-migrationer, committas |

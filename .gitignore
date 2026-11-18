@@ -24,6 +24,9 @@ coverage/
 tsconfig.tsbuildinfo
 next-env.d.ts
 
+# Signerad genväg: byggs av scripts/build-shortcut.mjs, innehåller instansens adress
+public/shortcuts/*.shortcut
+
 # Local data
 data/
 

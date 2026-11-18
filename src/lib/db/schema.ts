@@ -355,3 +355,26 @@ export const waterLog = pgTable(
   },
   (t) => [uniqueIndex("water_log_day_ux").on(t.userId, t.loggedOn)],
 );
+
+// ------------------------------------------------------------- hälsosynk
+
+/**
+ * Nyckel för Genvägar-appen (Shortcuts) på iPhone, som skickar vikt och vatten från Hälsa.
+ * Bara SHA-256 av nyckeln lagras; klartexten visas en gång när den skapas. Ett konto har
+ * högst en nyckel — att skapa en ny ersätter den gamla.
+ */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: createdAt(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    /** Vad senaste synken gjorde, t.ex. "vikt 82,3 kg · vatten 1 250 ml". */
+    lastSummary: text("last_summary"),
+  },
+  (t) => [uniqueIndex("api_tokens_hash_ux").on(t.tokenHash), uniqueIndex("api_tokens_user_ux").on(t.userId)],
+);

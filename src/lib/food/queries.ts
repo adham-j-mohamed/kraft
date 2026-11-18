@@ -398,6 +398,24 @@ export async function addWater(userId: string, date: string, deltaMl: number): P
   return row.ml;
 }
 
+/**
+ * Sätter dagens vatten till minst `ml` och svarar med dagens summa. Används av hälsosynken:
+ * Hälsa skickar en dagssumma, så att köra synken två gånger ska inte dubbelräkna, och en
+ * manuell loggning i Kraft som är större än Hälsans värde ska ligga kvar.
+ */
+export async function setWaterAtLeast(userId: string, date: string, ml: number): Promise<number> {
+  const clamped = Math.max(0, Math.min(10_000, ml));
+  const [row] = await getDb()
+    .insert(waterLog)
+    .values({ userId, loggedOn: date, ml: clamped })
+    .onConflictDoUpdate({
+      target: [waterLog.userId, waterLog.loggedOn],
+      set: { ml: sql`greatest(${waterLog.ml}, ${clamped})`, updatedAt: new Date() },
+    })
+    .returning({ ml: waterLog.ml });
+  return row.ml;
+}
+
 /** Håller `user_settings.weight_kg` i takt med senaste vägningen, eftersom målen räknas ur den. */
 async function syncSettingsWeight(userId: string): Promise<void> {
   const db = getDb();

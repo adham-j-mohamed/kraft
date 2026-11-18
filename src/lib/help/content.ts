@@ -206,6 +206,39 @@ const sv: HelpContent = {
       cta: { href: "/food", label: "Öppna matloggen" },
     },
     {
+      id: "halsosynk",
+      title: "Hälsosynk från iPhone",
+      summary: "Vikt från Hälsa-appen hamnar i Kraft av sig själv",
+      blocks: [
+        {
+          t: "p",
+          text: "En genväg i Genvägar-appen kan skicka din senaste vikt från Hälsa till Kraft varje kväll. Du installerar ingen app, men en genväg och en automation måste du lägga till en gång.",
+        },
+        {
+          t: "steps",
+          items: [
+            "Öppna **Inställningar → Hälsosynk** i Safari på iPhone och tryck **Skapa nyckel**. Tryck **Kopiera nyckeln**.",
+            "Tryck **Lägg till genvägen**. Genvägar frågar efter nyckeln — klistra in den.",
+            "I Genvägar: **Automatisering → Ny automatisering → Tid på dagen**, välj klockslag, välj genvägen **kraft-halsosynk** och **Kör direkt**.",
+            "Tillåt åtkomst till vikt i Hälsa när iOS frågar. Kör genvägen en gång för hand — sidan visar sedan **Senaste synk** med vad som kom fram.",
+          ],
+        },
+        {
+          t: "list",
+          items: [
+            "**Vikt:** den senaste vägningen i Hälsa ersätter dagens vägning i Kraft. Genvägen räknar med kilo.",
+            "**Nyckeln** är ett lösenord till bara den här synken. Du kan skapa en ny (den gamla slutar fungera) eller ta bort den under Inställningar → Hälsosynk.",
+            "**Vatten** kan Kraft ta emot som dagssumma, men den färdiga genvägen skickar det inte än.",
+          ],
+        },
+        {
+          t: "tip",
+          text: "Visar sidan ingen synk efter att du kört genvägen? Då har inget kommit fram till Kraft, och felet sitter i genvägen eller i åtkomsten till Hälsa.",
+        },
+      ],
+      cta: { href: "/settings/health", label: "Öppna hälsosynk" },
+    },
+    {
       id: "utseende",
       title: "Språk och tema",
       summary: "Svenska/engelska och mörkt/ljust",
@@ -471,6 +504,39 @@ const en: HelpContent = {
         },
       ],
       cta: { href: "/food", label: "Open the food log" },
+    },
+    {
+      id: "healthsync",
+      title: "Health sync from iPhone",
+      summary: "Weight from the Health app ends up in Kraft on its own",
+      blocks: [
+        {
+          t: "p",
+          text: "A shortcut in the Shortcuts app can send your latest weight from Health to Kraft every evening. There is no app to install, but you add one shortcut and one automation once.",
+        },
+        {
+          t: "steps",
+          items: [
+            "Open **Settings → Health sync** in Safari on your iPhone and tap **Create key**. Tap **Copy the key**.",
+            "Tap **Add the shortcut**. Shortcuts asks for the key — paste it.",
+            "In Shortcuts: **Automation → New Automation → Time of Day**, pick a time, choose the shortcut **kraft-halsosynk** and **Run Immediately**.",
+            "Allow access to weight in Health when iOS asks. Run the shortcut once by hand — the page then shows **Last sync** with what arrived.",
+          ],
+        },
+        {
+          t: "list",
+          items: [
+            "**Weight:** the latest weigh-in in Health replaces today's weigh-in in Kraft. The shortcut assumes kilograms.",
+            "**The key** is a password for this sync only. You can create a new one (the old one stops working) or remove it under Settings → Health sync.",
+            "**Water** Kraft can accept as a daily total, but the finished shortcut doesn't send it yet.",
+          ],
+        },
+        {
+          t: "tip",
+          text: "No sync shown after you ran the shortcut? Then nothing reached Kraft, and the problem is in the shortcut or in the access to Health.",
+        },
+      ],
+      cta: { href: "/settings/health", label: "Open health sync" },
     },
     {
       id: "appearance",

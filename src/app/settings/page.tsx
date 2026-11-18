@@ -76,6 +76,10 @@ export default async function SettingsPage({
         {t("settings.goals")}
       </Link>
 
+      <Link className="btn w-full" href="/settings/health">
+        {t("settings.health")}
+      </Link>
+
       <Link className="btn w-full" href="/help">
         {t("top.help")}
       </Link>
