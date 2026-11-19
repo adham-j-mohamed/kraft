@@ -80,7 +80,8 @@ export default async function RegisterPage({
               name="note"
               maxLength={140}
               placeholder={t("register.notePlaceholder")}
-              autoComplete="off"
+              autoComplete="name"
+              required
             />
             <span className="muted text-xs">{t("register.noteHint")}</span>
           </label>

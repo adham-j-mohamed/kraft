@@ -83,7 +83,7 @@ const sv: HelpContent = {
           t: "list",
           items: [
             "**Skapa konto:** tryck **Skapa konto** på inloggningssidan. Användarnamn: 3–32 tecken, a–z, 0–9, punkt, bindestreck eller understreck. Lösenord: minst 8 tecken.",
-            "**Vem är du?** Skriv vem du är. Det är det administratören ser när hen ska godkänna dig.",
+            "**Ditt namn:** skriv ditt namn. Det är det administratören ser när hen ska godkänna dig.",
             "**Godkännande:** en admin måste godkänna kontot innan du kan logga in. Du får inget mejl, så försök logga in igen senare.",
             "**Byta lösenord:** Inställningar → Byt lösenord. Då loggas dina andra enheter ut.",
             "**Glömt lösenord:** be en admin sätta ett nytt. Det finns ingen glömt-länk eftersom appen inte skickar mejl.",
@@ -383,7 +383,7 @@ const en: HelpContent = {
           t: "list",
           items: [
             "**Create an account:** tap **Create account** on the login page. Username: 3–32 characters, a–z, 0–9, dot, hyphen or underscore. Password: at least 8 characters.",
-            "**Who are you?** Say who you are. That's what the administrator sees when deciding whether to approve you.",
+            "**Your name:** write your name. That's what the administrator sees when deciding whether to approve you.",
             "**Approval:** an admin has to approve the account before you can log in. You won't get an email, so try logging in again later.",
             "**Change password:** Settings → Change password. Your other devices are logged out.",
             "**Forgot your password:** ask an admin to set a new one. There's no reset link because the app doesn't send email.",
